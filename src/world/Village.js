@@ -117,11 +117,7 @@ export class Village {
 
 		}
 
-		// plank side paths from the plaza / main boardwalk to the nearest houses
-		this.sidePaths = [
-			buildBoardwalk( ctx( this.town ), [ [ 36.8, - 110.6 ], [ 32.0, - 109.3 ], [ 27.4, - 107.6 ] ], { width: 1.1, lift: 0.2, lightEvery: 1e9 } ),
-			buildBoardwalk( ctx( this.town ), [ [ 46.8, - 97.8 ], [ 53.5, - 98.5 ], [ 61.7, - 99.1 ] ], { width: 1.1, lift: 0.2, lightEvery: 1e9 } ),
-		];
+		this.sidePaths = []; // the plank side paths led to houses that are no longer built
 
 		this.footprints.push( buildBoathouse( ctx( this.harbor ), specs.boathouse ).footprint );
 		this.footprints.push( buildMarketStall( ctx( this.town ), specs.stall ).footprint );
@@ -185,7 +181,7 @@ export class Village {
 		];
 
 		return {
-			houses: [ ...houses, ...huts ],
+			houses: [ ...houses, ...huts ].filter( ( h ) => h.name === 'L' ), // only the two-storey house with the stone chimney stays
 			sheds,
 			boathouse: { x: 92.5, z: - 57.5, yaw: - 0.08, wall: lin( 0x8fb3a8 ), paint: 0.58 },
 			stall: { x: 40.2, z: - 113.2, yaw: 0.05 },
@@ -399,7 +395,7 @@ export class Village {
 		const { B, terrain, colliders, rand, lights } = ctx;
 		const g = ( x, z ) => terrain.heightAt( x, z );
 
-		// picket fence around house A's side yard and a rail fence near G
+		// fences by the removed houses' yards
 		const fenceAt = ( pts, style, tint ) => {
 
 			fence( B, pts, g, style, tint, rand.next(), colliders, ( x, z ) => new Vector3( x, 0, z ) );
@@ -407,8 +403,6 @@ export class Village {
 
 		};
 
-		fenceAt( [ [ 5.2, - 101.5 ], [ 5.6, - 108.5 ], [ 9.0, - 111.2 ] ], 'picket', TRIMS.white );
-		fenceAt( [ [ 21.5, - 124.0 ], [ 23.6, - 131.5 ], [ 22.8, - 135.5 ] ], 'rail' );
 		fenceAt( [ [ 70.0, - 102.5 ], [ 72.5, - 106.0 ] ], 'picket', TRIMS.cream );
 		fenceAt( [ [ 86.5, - 150.0 ], [ 87.8, - 158.5 ] ], 'rail' );
 
