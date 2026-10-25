@@ -1,4 +1,4 @@
-# Tidewater
+# VASGK ISLAND
 
 A real-time tropical island and ocean: swim the reef, drive the boat out to deep water, and watch a humpback
 breach. It runs directly on WebGPU and WGSL with its own small rendering engine, no framework.
