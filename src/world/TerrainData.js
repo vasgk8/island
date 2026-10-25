@@ -125,9 +125,8 @@ export class TerrainData {
 	_coast( x, z, F, bz ) {
 
 		const dBody = ellipseDist( x, z, 0, - 442, 565, 400 );
-		const dW = ellipseDist( x, z, - 272, - 25, 92, 205 );
 		const dE = ellipseDist( x, z, 288, - 12, 108, 228 );
-		let d = smin( dBody, smin( dW, dE, 40 ), 75 );
+		let d = smin( dBody, dE, 75 ); // no west headland: open sea and sand there
 		d += F.f170 * 34 * ( 1 - 0.9 * bz );
 		if ( bz < 1 ) d += this.noise.fbm( x / 38, z / 38, 3 ) * 7 * ( 1 - bz );
 		d += F.und * 5 * bz; // gentle beach undulation
@@ -143,9 +142,7 @@ export class TerrainData {
 		const d = this._coast( x, z, F, bz );
 
 		// rocky headlands and outer coast
-		const headland = Math.max(
-			1 - smoothstep( 60, 140, Math.hypot( ( x + 272 ) * 0.9, ( z + 25 ) * 0.45 ) ),
-			1 - smoothstep( 60, 150, Math.hypot( ( x - 288 ) * 0.9, ( z + 12 ) * 0.45 ) ) );
+		const headland = 1 - smoothstep( 60, 150, Math.hypot( ( x - 288 ) * 0.9, ( z + 12 ) * 0.45 ) );
 		const rm = Math.max( headland, 1 - bz * 1.4 );
 		let rock = 0;
 		if ( rm > 0.35 ) rock = smoothstep( 0.35, 0.75, clamp( rm * ( 0.55 + 0.45 * n2.fbm( x / 60, z / 60, 3 ) ), 0, 1 ) );
@@ -295,7 +292,7 @@ export class TerrainData {
 				Aund[ k ] = n.fbm( x / 260, z / 90, 2 );
 				Adeep[ k ] = n.fbm( x / 220, z / 220, 4 );
 				// massif envelope only over the island body
-				if ( ellipseDist( x, z, 0, - 442, 640, 470 ) < 0 || ellipseDist( x, z, - 272, - 25, 160, 280 ) < 0 || ellipseDist( x, z, 288, - 12, 170, 300 ) < 0 ) {
+				if ( ellipseDist( x, z, 0, - 442, 640, 470 ) < 0 || ellipseDist( x, z, 288, - 12, 170, 300 ) < 0 ) {
 
 					AE[ k ] = ridgeEnvelope( wx + n3.fbm( x / 130, z / 130, 2 ) * 28, wz + n3.fbm( x / 130 + 5.2, z / 130 - 1.7, 2 ) * 28 );
 
