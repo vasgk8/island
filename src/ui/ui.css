@@ -2539,6 +2539,8 @@ body {
 
 .tw-root.is-photo .tw-panel,
 .tw-root.is-photo .tw-rail,
+.tw-root.is-photo .tw-mode,
+.tw-root.is-starting .tw-mode,
 .tw-root.is-photo .tw-help,
 .tw-root.is-photo .tw-menu,
 .tw-root.is-photo .tw-tip {
@@ -2607,4 +2609,37 @@ body {
 		width: auto;
 	}
 
+}
+
+/* Walk / Fly switch */
+.tw-mode {
+	position: absolute;
+	top: var(--tw-3);
+	left: 50%;
+	display: flex;
+	gap: calc(2 * var(--tw-u));
+	padding: calc(4 * var(--tw-u));
+	border-radius: calc(12 * var(--tw-u));
+	transform: translateX(-50%);
+}
+
+.tw-mode-btn {
+	min-width: calc(64 * var(--tw-u));
+	height: calc(30 * var(--tw-u));
+	padding: 0 calc(14 * var(--tw-u));
+	border-radius: calc(8 * var(--tw-u));
+	color: var(--tw-ink-2);
+	font-size: calc(12.5 * var(--tw-u));
+	font-weight: 600;
+	transition: color var(--tw-fast), background var(--tw-fast);
+}
+
+.tw-mode-btn:hover {
+	color: var(--tw-ink);
+	background: var(--tw-fill-2);
+}
+
+.tw-mode-btn.is-active {
+	color: var(--tw-aqua);
+	background: var(--tw-fill-2);
 }

@@ -1894,6 +1894,7 @@ export class UI {
 		this.onPanelInteract = null; // ( event ) pointerdown on the settings panel or rail
 		this.onPanelToggle = null; // ( open )
 		this.onHelpToggle = null; // ( open )
+		this.onModeChange = null; // ( 'walk' | 'fly' ) a Walk / Fly button was clicked
 		// Opening the panel exits pointer lock so the cursor can reach it.
 		this.releasePointerOnPanel = true;
 
@@ -2116,6 +2117,20 @@ export class UI {
 
 		this.root.append( rail, panel );
 
+		// Walk / Fly switch, always on screen (click the mouse free with Esc first)
+		const mode = this.modeEl = h( 'div', 'tw-mode tw-glass tw-interactive', { role: 'group', 'aria-label': 'Movement mode' } );
+		this.modeBtns = {};
+		for ( const [ id, label ] of [ [ 'walk', 'Walk' ], [ 'fly', 'Fly' ] ] ) {
+
+			const b = h( 'button', 'tw-mode-btn', { type: 'button', text: label, 'aria-pressed': 'false' } );
+			b.addEventListener( 'click', () => callHook( this.onModeChange, id ) );
+			this.modeBtns[ id ] = b;
+			mode.append( b );
+
+		}
+		this.root.append( mode );
+		this.setMode( 'walk' );
+
 	}
 
 	_buildHelp() {
@@ -2197,7 +2212,7 @@ export class UI {
 	_bindGlobal() {
 
 		const signal = this._ac.signal;
-		for ( const el of [ this.panel, this.rail, this.helpEl, this.startEl ] ) this._isolate( el );
+		for ( const el of [ this.panel, this.rail, this.modeEl, this.helpEl, this.startEl ] ) this._isolate( el );
 
 		const interact = ( e ) => {
 
@@ -2208,9 +2223,10 @@ export class UI {
 
 		this.panel.addEventListener( 'pointerdown', interact );
 		this.rail.addEventListener( 'pointerdown', interact );
+		this.modeEl.addEventListener( 'pointerdown', interact );
 
 		// Mouse-activated buttons give focus back so Space/Enter reach the game again.
-		for ( const el of [ this.panel, this.rail, this.helpEl ] ) {
+		for ( const el of [ this.panel, this.rail, this.modeEl, this.helpEl ] ) {
 
 			el.addEventListener( 'click', ( e ) => {
 
@@ -3008,6 +3024,18 @@ export class UI {
 	}
 
 	// Brief notification. Returns a function that dismisses it early.
+	// Highlights the active Walk / Fly button.
+	setMode( id ) {
+
+		for ( const k in this.modeBtns ) {
+
+			this.modeBtns[ k ].classList.toggle( 'is-active', k === id );
+			this.modeBtns[ k ].setAttribute( 'aria-pressed', String( k === id ) );
+
+		}
+
+	}
+
 	toast( text, ms = 2500 ) {
 
 		text = String( text ?? '' );
