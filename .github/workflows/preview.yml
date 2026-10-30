@@ -1,0 +1,37 @@
+name: PR preview build
+
+# Builds every pull request and attaches the site as a downloadable artifact
+# (Actions run page -> Artifacts -> "site-preview"). Unzip it and serve the folder,
+# e.g. `npx serve site-preview` (opening index.html straight from disk will not load).
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-preview
+          path: dist
+          retention-days: 14
+      - name: Summary
+        run: |
+          echo "### Preview build ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download **site-preview** from the Artifacts section of this run, unzip it and run \`npx serve <folder>\`." >> "$GITHUB_STEP_SUMMARY"

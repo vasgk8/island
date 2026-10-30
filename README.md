@@ -104,7 +104,9 @@ npm run dev      # http://127.0.0.1:5189
 npm run build    # static build in dist/
 ```
 
-Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.yml`.
+Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.yml`. Every pull request is built by
+`.github/workflows/preview.yml`: download the **site-preview** artifact from the PR's check run, unzip it and run
+`npx serve <folder>` to try the change before merging.
 
 ## Project layout
 
