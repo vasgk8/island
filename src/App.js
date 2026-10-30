@@ -55,6 +55,7 @@ import { Underwater, LENS_REACH } from './post/Underwater.js';
 import { PostFX } from './post/PostFX.js';
 import { AirHaze } from './post/AirHaze.js';
 import { FlyCamera } from './player/FlyCamera.js';
+import { TouchControls, touchWanted } from './ui/TouchControls.js';
 import { Player } from './player/Player.js';
 import { BoatController } from './player/BoatController.js';
 import { BoatSpray } from './player/BoatSpray.js';
@@ -104,6 +105,7 @@ export class App {
 		this.camera = camera;
 
 		this.input = new Input( engine.domElement );
+		if ( touchWanted() ) this.touch = new TouchControls( this.input );
 		this.fly = new FlyCamera( camera, engine.domElement, this.input );
 		this.fly.setPose( new Vector3( 20, 6, - 20 ), Math.PI * 0.9, - 0.12 );
 
@@ -335,6 +337,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		// ---------------------------------------------------------------- audio
 		// recorded field recordings (public/audio, credits in public/audio/CREDITS.md); ?noAudio turns it off
 		this.audio = qs.has( 'noAudio' ) ? null : new SoundScape();
+		if ( this.touch && this.audio ) this.touch.root.addEventListener( 'pointerdown', () => this.audio.resume() );
 		this.player.audio = this.audio;
 		this.boatCtl.onSlam = ( s ) => this.audio && this.audio.hullSlap( s );
 		engine.domElement.addEventListener( 'click', () => {
@@ -481,6 +484,26 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 			this.ui.s.advance = s.timeSpeed !== 0;
 			this.ui.ui.refresh();
 			this.ui.ui.toast( s.timeSpeed !== 0 ? 'Time running' : 'Time paused' );
+
+		}
+
+	}
+
+	isNight() {
+
+		const t = this.settings.timeOfDay;
+		return t >= 19.5 || t < 5.5;
+
+	}
+
+	// the Day / Night button: jump to midday, or to a moonlit night
+	toggleDayNight() {
+
+		this.settings.timeOfDay = this.isNight() ? 12 : 22;
+		if ( this.ui ) {
+
+			this.ui.ui.refresh();
+			this.ui.ui.toast( this.isNight() ? 'Night' : 'Day' );
 
 		}
 

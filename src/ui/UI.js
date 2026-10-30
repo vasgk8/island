@@ -1894,6 +1894,7 @@ export class UI {
 		this.onPanelInteract = null; // ( event ) pointerdown on the settings panel or rail
 		this.onPanelToggle = null; // ( open )
 		this.onHelpToggle = null; // ( open )
+		this.onTimeToggle = null; // () the Day / Night button was clicked
 		this.onModeChange = null; // ( 'walk' | 'fly' ) a Walk / Fly button was clicked
 		// Opening the panel exits pointer lock so the cursor can reach it.
 		this.releasePointerOnPanel = true;
@@ -2128,6 +2129,9 @@ export class UI {
 			mode.append( b );
 
 		}
+		this.timeBtn = h( 'button', 'tw-mode-btn tw-mode-time', { type: 'button', text: 'Night', 'aria-label': 'Switch between day and night' } );
+		this.timeBtn.addEventListener( 'click', () => callHook( this.onTimeToggle ) );
+		mode.append( h( 'span', 'tw-mode-sep' ), this.timeBtn );
 		this.root.append( mode );
 		this.setMode( 'walk' );
 
@@ -3024,6 +3028,14 @@ export class UI {
 	}
 
 	// Brief notification. Returns a function that dismisses it early.
+	// The time button names what a click does: 'Night' by day, 'Day' by night.
+	setNight( night ) {
+
+		const t = night ? 'Day' : 'Night';
+		if ( this.timeBtn.textContent !== t ) this.timeBtn.textContent = t;
+
+	}
+
 	// Highlights the active Walk / Fly button.
 	setMode( id ) {
 

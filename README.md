@@ -75,6 +75,10 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 | P | Photo mode |
 | F1 or ? | All controls |
 
+The Walk / Fly and Day / Night buttons at the top of the screen are clickable (press Esc first to free the mouse).
+On touch screens a movement stick, drag-to-look and Jump / E / Run / Dive buttons appear automatically (or add
+`?touch` to the URL).
+
 The settings panel (H) exposes the sea state, time of day, sun azimuth, clouds, haze, post-processing and
 more.
 

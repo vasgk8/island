@@ -18,6 +18,7 @@ export class AppUI {
 		this.app = app;
 		this.ui = ui;
 		ui.onModeChange = ( id ) => app.setFreeCam( id === 'fly' );
+		ui.onTimeToggle = () => app.toggleDayNight();
 		const fft = app.fft;
 		const shore = app.shore;
 
@@ -254,6 +255,7 @@ export class AppUI {
 		ui.setStats( { fps: app.fps, frameMs: dt * 1000 } );
 		this.s.renderScale = app.post.scale;
 		ui.setMode( app.freeCam ? 'fly' : 'walk' );
+		ui.setNight( app.isNight() );
 
 		const p = app.player;
 		if ( app.freeCam ) {
