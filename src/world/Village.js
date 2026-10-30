@@ -175,7 +175,7 @@ export class Village {
 
 		// beach huts on the long west and east beaches (floor ~1.6 m above the sand on stilts)
 		const beachHuts = [
-			{ name: 'W1', harbor: true, x: - 236, z: - 196, yaw: - Math.PI / 2 + 0.1, w: 4.4, d: 4.2, floorY: 5.0, foundation: 'stilts', roof: 'gableFront', roofMat: 'thatch', thatchAge: 0.4, wall: P.turquoise, trim: T.white, accent: T.yellow, siding: 2, paint: 0.55, weather: 0.75, porch: { depth: 1.8, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, buoys: 1, porchBench: true, curtain: CURTAINS[ 0 ] },
+			{ name: 'W1', harbor: true, x: - 236, z: - 196, yaw: - Math.PI / 2 + 0.1, w: 4.4, d: 4.2, floorY: 4.4, foundation: 'stilts', roof: 'gableFront', roofMat: 'thatch', thatchAge: 0.4, wall: P.turquoise, trim: T.white, accent: T.yellow, siding: 2, paint: 0.55, weather: 0.75, porch: { depth: 1.8, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, buoys: 1, porchBench: true, curtain: CURTAINS[ 0 ] },
 			{ name: 'E1', harbor: true, x: 226, z: - 172, yaw: Math.PI / 2 - 0.12, w: 4.0, d: 4.0, floorY: 4.4, foundation: 'stilts', roof: 'gable', roofMat: 'metal', roofColor: R.red, rust: 0.4, wall: P.yellow, trim: T.white, accent: T.blue, siding: 2, paint: 0.6, weather: 0.7, porch: { depth: 1.6, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, porchBench: true, curtain: CURTAINS[ 1 ] },
 		];
 

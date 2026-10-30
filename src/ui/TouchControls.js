@@ -44,6 +44,7 @@ export class TouchControls {
 		this._bindLook();
 		this._bindStick();
 		document.body.append( root );
+		document.documentElement.classList.add( 'has-touch' );
 
 	}
 

@@ -1,5 +1,6 @@
 import * as THREE from '../engine/index.js';
 import { UI } from './UI.js';
+import { Minimap } from './Minimap.js';
 import { G } from '../core/Globals.js';
 import { GroundBounce } from '../materials/GroundBounce.js';
 
@@ -19,6 +20,8 @@ export class AppUI {
 		this.ui = ui;
 		ui.onModeChange = ( id ) => app.setFreeCam( id === 'fly' );
 		ui.onTimeToggle = () => app.toggleDayNight();
+		// the minimap (lower right, upper right with touch controls)
+		this.minimap = typeof document !== 'undefined' ? new Minimap( ui.hud || ui.root, app ) : null;
 		const fft = app.fft;
 		const shore = app.shore;
 
@@ -256,6 +259,7 @@ export class AppUI {
 		this.s.renderScale = app.post.scale;
 		ui.setMode( app.freeCam ? 'fly' : 'walk' );
 		ui.setNight( app.isNight() );
+		if ( this.minimap ) this.minimap.update( dt );
 
 		const p = app.player;
 		if ( app.freeCam ) {
