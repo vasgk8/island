@@ -20,6 +20,7 @@ const ellipseDist = ( x, z, cx, cz, rx, rz ) => {
 // central bay: the beach and its underwater profile stay smooth (the surf is tuned for it)
 const beachZoneAt = ( x, z ) => ( 1 - smoothstep( 120, 205, Math.abs( x - 10 ) ) ) * ( 1 - smoothstep( 40, 140, z + 40 ) ) * smoothstep( - 260, - 120, z );
 
+const WEST_CUT = - 170;
 const RES = 2048; // 1 m texels over the 2048 m domain
 
 // volcanic plugs on the summit ridge: [x, z, radius, height above the envelope]
@@ -124,7 +125,8 @@ export class TerrainData {
 
 	_coast( x, z, F, bz ) {
 
-		const dBody = ellipseDist( x, z, 0, - 442, 565, 400 );
+		// the west end of the main body is cut back to open sea at x = WEST_CUT (soft edge)
+		const dBody = - smin( - ellipseDist( x, z, 0, - 442, 565, 400 ), x - WEST_CUT, 60 );
 		const dE = ellipseDist( x, z, 288, - 12, 108, 228 );
 		let d = smin( dBody, dE, 75 ); // no west headland: open sea and sand there
 		d += F.f170 * 34 * ( 1 - 0.9 * bz );
