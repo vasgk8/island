@@ -1,6 +1,6 @@
-// On-screen controls for touch screens: a movement stick, drag-to-look and a few buttons.
-// They feed the same key set the keyboard does (Input.keys / Input.pressed), so the player,
-// the boat and the free camera need no changes. Shown on coarse-pointer devices or with ?touch.
+// On-screen controls for touch screens: an analog movement stick (Input.stick), drag-to-look and
+// a few buttons that feed the same key set the keyboard does (Input.keys / Input.pressed), plus a
+// photo-mode button. Shown on coarse-pointer devices or with ?touch.
 
 const BUTTONS = [
 	{ label: 'Jump', code: 'Space', hold: true },
@@ -20,12 +20,14 @@ export class TouchControls {
 	constructor( input ) {
 
 		this.input = input;
+		this.onPhoto = null; // (): the photo button was tapped (AppUI toggles photo mode)
 		const root = this.root = document.createElement( 'div' );
 		root.className = 'vi-touch';
 		root.innerHTML = `
 			<div class="vi-look"></div>
 			<div class="vi-stick"><div class="vi-knob"></div></div>
-			<div class="vi-btns"></div>`;
+			<div class="vi-btns"></div>
+			<button type="button" class="vi-photo" aria-label="Photo mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg></button>`;
 		this.look = root.querySelector( '.vi-look' );
 		this.stick = root.querySelector( '.vi-stick' );
 		this.knob = root.querySelector( '.vi-knob' );
@@ -41,10 +43,26 @@ export class TouchControls {
 
 		}
 
+		const photo = root.querySelector( '.vi-photo' );
+		photo.addEventListener( 'pointerdown', ( e ) => {
+
+			e.preventDefault();
+			e.stopPropagation();
+			if ( this.onPhoto ) this.onPhoto();
+
+		} );
+
 		this._bindLook();
 		this._bindStick();
 		document.body.append( root );
 		document.documentElement.classList.add( 'has-touch' );
+
+	}
+
+	// photo mode hides the stick and buttons (the photo button stays, faint, to leave it)
+	setPhotoMode( on ) {
+
+		this.root.classList.toggle( 'is-photo', on );
 
 	}
 
@@ -127,19 +145,16 @@ export class TouchControls {
 	_bindStick() {
 
 		let id = null, cx = 0, cy = 0;
-		const el = this.stick, R = 48;
-		const keys = { KeyW: false, KeyS: false, KeyA: false, KeyD: false };
+		const el = this.stick, R = 48, DEAD = 0.12;
 		const apply = ( dx, dy ) => {
 
-			const t = 0.35;
-			const want = { KeyW: dy < - t * R, KeyS: dy > t * R, KeyA: dx < - t * R, KeyD: dx > t * R };
-			for ( const code in want ) {
-
-				if ( want[ code ] === keys[ code ] ) continue;
-				keys[ code ] = want[ code ];
-				if ( want[ code ] ) this._press( code ); else this._release( code );
-
-			}
+			// analog, with a small dead zone and the rest rescaled to 0..1
+			let x = dx / R, y = - dy / R;
+			const l = Math.hypot( x, y );
+			const k = l < DEAD ? 0 : ( l - DEAD ) / ( 1 - DEAD ) / l;
+			x *= k; y *= k;
+			this.input.stick.x = x;
+			this.input.stick.y = y;
 
 		};
 

@@ -21,6 +21,12 @@ export class AppUI {
 		ui.onModeChange = ( id ) => app.setFreeCam( id === 'fly' );
 		ui.onTimeToggle = () => app.toggleDayNight();
 		ui.onTimeSet = ( h ) => app.setTimeOfDay( h );
+		if ( app.touch ) {
+
+			app.touch.onPhoto = () => ui.setPhotoMode( ! ui._photo );
+			ui.onPhotoMode = [ ...[ ui.onPhotoMode ].flat().filter( Boolean ), ( on ) => app.touch.setPhotoMode( on ) ];
+
+		}
 		// the minimap (lower right, upper right with touch controls)
 		this.minimap = typeof document !== 'undefined' ? new Minimap( ui.hud || ui.root, app ) : null;
 		const fft = app.fft;
@@ -200,6 +206,7 @@ export class AppUI {
 			app.camera.updateProjectionMatrix();
 
 		} } );
+		view.addSlider( { label: 'Look speed', object: app.input, key: 'lookScale', min: 0.3, max: 3, step: 0.05, tooltip: 'How fast the view turns with the mouse or a touch drag.' } );
 		view.addButton( { label: 'Free camera (F)', icon: 'camera', onClick: () => app.setFreeCam( ! app.freeCam ) } );
 
 		// ---------------------------------------------------------------- Effects

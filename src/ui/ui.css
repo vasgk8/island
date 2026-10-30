@@ -2735,3 +2735,33 @@ body {
 	.tw-mode-range { width: calc(70 * var(--tw-u)); }
 	.tw-mode-clock { display: none; }
 }
+
+.vi-photo {
+	position: absolute;
+	/* left of the Jump / E buttons, clear of the settings rail on short screens */
+	right: calc(max(20px, env(safe-area-inset-right)) + 2 * 64px + 12px + 16px);
+	bottom: calc(max(28px, env(safe-area-inset-bottom)) + 64px + 12px + 8px);
+	width: 48px;
+	height: 48px;
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.14);
+	color: #fff;
+	touch-action: none;
+}
+
+.vi-photo svg {
+	width: 24px;
+	height: 24px;
+}
+
+.vi-touch.is-photo .vi-stick,
+.vi-touch.is-photo .vi-btns {
+	display: none;
+}
+
+.vi-touch.is-photo .vi-photo {
+	opacity: 0.35;
+}
