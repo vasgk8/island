@@ -155,8 +155,8 @@ body {
 
 .loader-title {
 	margin: 0 -0.3em 0 -0.04em; /* optical: the trailing tracking and the T's side bearing */
-	/* always fits its column: 9 letters at 0.3em tracking are ~9.2em wide, trailing tracking included */
-	font-size: min(136px, 10.4cqi);
+	/* always fits its column: 12 characters at 0.3em tracking are ~12.3em wide, trailing tracking included */
+	font-size: min(102px, 7.8cqi);
 	white-space: nowrap;
 	font-weight: 600;
 	letter-spacing: 0.3em;
@@ -374,7 +374,7 @@ body {
 	.loader-title {
 		letter-spacing: 0.22em;
 		margin-right: -0.22em;
-		font-size: min(136px, 11.2cqi);
+		font-size: min(102px, 8.4cqi);
 	}
 
 }
@@ -2464,7 +2464,7 @@ body {
 
 .tw-start-title {
 	margin-right: -0.42em;
-	font-size: clamp(30px, 4.6vw, 64px);
+	font-size: clamp(24px, 3.4vw, 48px);
 	font-weight: 600;
 	letter-spacing: 0.42em;
 	line-height: 1.05;
