@@ -74,6 +74,8 @@ export const PATHS = [
 	{ w: 1.1, pts: [ [ 21, - 56 ], [ 20, - 68 ], [ 18.5, - 80 ], [ 16.5, - 92 ], [ 15.5, - 100 ], [ 20, - 102.5 ], [ 28, - 104.5 ], [ 35.5, - 108.5 ] ] },
 	// plaza north up the valley and onto the central spur (hiking trail)
 	{ w: 0.6, pts: [ [ 42, - 116.5 ], [ 45.5, - 126 ], [ 48, - 138 ], [ 49, - 150 ], [ 49.5, - 162 ], [ 47, - 175 ], [ 41, - 188 ], [ 36, - 199 ], [ 31, - 212 ], [ 33, - 224 ], [ 26, - 236 ], [ 20, - 247 ], [ 24, - 258 ], [ 16, - 270 ], [ 11, - 283 ], [ 15, - 296 ], [ 8, - 309 ], [ 4, - 322 ] ] },
+	// from the hiking trail across to the porch of the house
+	{ w: 0.7, pts: [ [ 45.8, - 128 ], [ 41, - 134 ], [ 35.5, - 140 ], [ 31, - 143.5 ] ] },
 	// east: boathouse up to the boardwalk
 	{ w: 0.9, pts: [ [ 88, - 62 ], [ 80, - 72 ], [ 70, - 80 ], [ 60, - 86 ], [ 54.5, - 90 ] ] },
 	// west: along the back of the beach to the western grove

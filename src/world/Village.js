@@ -8,13 +8,13 @@ import { buildBoardwalk } from './village/Boardwalk.js';
 import { buildPier, PIER } from './Pier.js';
 import { G } from '../engine/render/Frame.js';
 import {
-	InstancedProps, Rand, lin, C, WOOD, rowboat, netRack, fishRack, fence, laundryLine, oar, buoy,
-	bench, ropeCoil, pathLight, lampPost, bucket, wreck,
+	InstancedProps, Rand, lin, C, WOOD, rowboat, netRack, laundryLine, oar, buoy,
+	bench, ropeCoil, pathLight, lampPost, wreck,
 } from './Props.js';
 
-// Tropical fishing village: timber pier with a T-head, stilt fishing huts on the beach,
-// a boathouse, a boardwalk up to a small market plaza and a dozen painted cottages on
-// the slope, dressed with nets, traps, barrels, crates, boats and lanterns.
+// The settlement by the bay: timber pier with a T-head and the island's name sign, a boathouse,
+// a boardwalk up to a small lookout plaza, one two-storey house with its shed on the slope and
+// beach huts on the long beaches, dressed with nets, traps, barrels, crates, boats and lanterns.
 //
 // All static geometry (including repeated props) is merged per material: 6 draw calls
 // (wood + glass, hard + rope, roof metal, thatch, stone, fabric). The opaque materials
@@ -316,12 +316,7 @@ export class Village {
 
 		}
 
-		// fish drying rack between the huts
-		fishRack( B, 73.8, g( 73.8, - 69.5 ), - 69.5, 0.2, 2.6, rand.next(), rand );
-		box( 73.8, g( 73.8, - 69.5 ) + 1.0, - 69.5, 1.45, 1.0, 0.75, 0.2, 'rack' );
-		this.foundationChecks.push( { x: 73.8, y: g( 73.8, - 69.5 ) - 0.2, z: - 69.5 } );
-
-		// crates, traps and barrels around the pier foot and the huts
+		// crates, traps and barrels around the pier foot and along the beach
 		const X = PIER.x;
 		const cluster = ( items ) => {
 
@@ -365,7 +360,7 @@ export class Village {
 		ropeCoil( B, 59.6, g( 59.6, - 59.2 ), - 59.2, 0.08, 0.34, 5, rand.next() );
 		ropeCoil( B, 90.4, g( 90.4, - 52.4 ), - 52.4, 0.08, 0.28, 4, rand.next(), C.ropeBlue );
 
-		// a buoy string on posts between the huts and the fence-like line of old posts
+		// a buoy string on a line of old posts east of the pier foot
 		for ( let i = 0; i < 5; i ++ ) {
 
 			const x = 57.8 + i * 1.6, z = - 67.8 - i * 0.25;
@@ -390,18 +385,7 @@ export class Village {
 		const { B, terrain, colliders, rand, lights } = ctx;
 		const g = ( x, z ) => terrain.heightAt( x, z );
 
-		// fences by the removed houses' yards
-		const fenceAt = ( pts, style, tint ) => {
-
-			fence( B, pts, g, style, tint, rand.next(), colliders, ( x, z ) => new Vector3( x, 0, z ) );
-			for ( const [ x, z ] of pts ) this.foundationChecks.push( { x, y: g( x, z ) - 0.13, z } );
-
-		};
-
-		fenceAt( [ [ 70.0, - 102.5 ], [ 72.5, - 106.0 ] ], 'picket', TRIMS.cream );
-		fenceAt( [ [ 86.5, - 150.0 ], [ 87.8, - 158.5 ] ], 'rail' );
-
-		// laundry lines
+		// laundry line in the side yard of the house (west of it) and a little clutter by it and the shed
 		const cloth = [ lin( 0xf2f0ea ), lin( 0xd9534a ), lin( 0x4f8fc0 ), lin( 0xf0c850 ), lin( 0x7fbf9f ), lin( 0xe89ab0 ) ];
 		const pole = ( x, z ) => {
 
@@ -412,31 +396,12 @@ export class Village {
 
 		};
 
-		laundryLine( B, pole( 7.8, - 112.8 ), pole( 12.6, - 114.6 ), rand, cloth );
-		laundryLine( B, pole( 21.0, - 136.8 ), pole( 25.2, - 137.6 ), rand, cloth );
-		laundryLine( B, pole( 83.2, - 138.2 ), pole( 87.4, - 140.0 ), rand, cloth );
-
-		// fish drying rack and scattered gear in the village
-		fishRack( B, 67.0, g( 67.0, - 118.5 ), - 118.5, - 0.25, 2.4, rand.next(), rand );
-		colliders.addBox( new Vector3( 67.0, g( 67.0, - 118.5 ) + 1.0, - 118.5 ), new Vector3( 1.35, 1.0, 0.75 ), - 0.25, { tag: 'rack' } );
-		this.foundationChecks.push( { x: 67.0, y: g( 67.0, - 118.5 ) - 0.2, z: - 118.5 } );
-		netRack( B, 5.5, g( 5.5, - 136.5 ), - 136.5, 0.35, 3.0, lin( 0x6a5a8a ), rand.next(), ( lx, lz ) => g( 5.5 + lx * Math.cos( 0.35 ) + lz * Math.sin( 0.35 ), - 136.5 - lx * Math.sin( 0.35 ) + lz * Math.cos( 0.35 ) ) );
-		for ( const sx of [ - 1.5, 1.5 ] ) {
-
-			const px = 5.5 + sx * Math.cos( 0.35 ), pz = - 136.5 - sx * Math.sin( 0.35 );
-			colliders.addCylinder( px, pz, 0.1, g( px, pz ) - 0.4, g( px, pz ) + 2.0, { tag: 'rack' } );
-			this.foundationChecks.push( { x: px, y: g( px, pz ) - 0.4, z: pz } );
-
-		}
+		laundryLine( B, pole( 22.4, - 146.6 ), pole( 22.0, - 151.6 ), rand, cloth );
 
 		const clutter = [
-			[ 'barrel', 20.4, - 105.2, 0.3 ], [ 'crate', 21.2, - 104.6, 0.8 ], [ 'crate', 21.25, - 104.65, 1.1, 0.4 ],
-			[ 'trap', 69.2, - 110.8, 0.2 ], [ 'trap', 69.3, - 111.4, 0.1 ], [ 'trap', 69.25, - 111.1, 0.3, 0.31 ],
-			[ 'barrel', 86.6, - 118.8, 0.2 ], [ 'crate', 85.9, - 119.6, 0.4 ],
-			[ 'crate', 64.6, - 134.2, 0.3 ], [ 'barrel', 63.9, - 133.4, 1.0 ],
 			[ 'trap', 47.9, - 150.2, 0.6 ], [ 'trap', 48.2, - 150.8, 0.4 ],
 			[ 'barrel', 25.4, - 157.4, 0.5 ], [ 'barrel', 26.1, - 157.8, 1.5 ],
-			[ 'crate', 9.8, - 145.4, 0.2 ], [ 'crate', 91.6, - 128.5, 0.9 ],
+			[ 'crate', 36.4, - 155.8, 0.3 ], [ 'crate', 36.45, - 155.85, 0.9, 0.4 ],
 		];
 		for ( const [ type, x, z, ry, stack ] of clutter ) {
 
@@ -451,27 +416,8 @@ export class Village {
 
 		}
 
-		// upturned rowboat on trestles in a yard + a bucket
-		rowboat( B, 88.2, g( 88.2, - 124.5 ) + 0.55, - 124.5, 1.2, { upsideDown: true, seed: rand.next(), hull: lin( 0xc9463a ), bottom: lin( 0x2d2d2d ), trim: C.white } );
-		for ( const o of [ - 1.2, 1.2 ] ) {
-
-			const px = 88.2 + o * Math.sin( 1.2 ), pz = - 124.5 + o * Math.cos( 1.2 );
-			B.box( 'wood', px, g( px, pz ) + 0.26, pz, 1.1, 0.07, 0.09, { grain: 0, ry: 1.2 + Math.PI / 2, data: WOOD( rand.next(), 0.85 ) } );
-			for ( const s of [ - 0.4, 0.4 ] ) {
-
-				const lx = px + s * Math.cos( 1.2 + Math.PI / 2 ), lz = pz - s * Math.sin( 1.2 + Math.PI / 2 );
-				B.box( 'wood', lx, g( lx, lz ) + 0.08, lz, 0.07, 0.5, 0.07, { grain: 1, data: WOOD( rand.next(), 0.85 ) } );
-
-			}
-
-		}
-
-		colliders.addBox( new Vector3( 88.2, g( 88.2, - 124.5 ) + 0.6, - 124.5 ), new Vector3( 0.75, 0.6, 2.0 ), 1.2, { tag: 'rowboat' } );
-		this.foundationChecks.push( { x: 88.2, y: g( 88.2, - 124.5 ) - 0.17, z: - 124.5 } );
-		bucket( B, 86.9, g( 86.9, - 122.6 ), - 122.6, C.blue, rand.next() );
-
-		// a couple of extra path lights toward the upper houses
-		for ( const [ x, z ] of [ [ 33.5, - 125.5 ], [ 48.0, - 130.5 ], [ 42.0, - 142.0 ] ] ) {
+		// path lights along the walk from the plaza up to the house
+		for ( const [ x, z ] of [ [ 44.2, - 124.0 ], [ 43.0, - 134.5 ], [ 37.0, - 141.5 ] ] ) {
 
 			const w = pathLight( B, x, g( x, z ) - 0.25, z, rand.next() );
 			lights.push( { position: w, color: new Color( 1.0, 0.7, 0.4 ), intensity: 2.5, kind: 'pathLight' } );
