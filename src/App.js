@@ -55,10 +55,8 @@ import { Underwater, LENS_REACH } from './post/Underwater.js';
 import { PostFX } from './post/PostFX.js';
 import { AirHaze } from './post/AirHaze.js';
 import { FlyCamera } from './player/FlyCamera.js';
+import { TouchControls, touchWanted } from './ui/TouchControls.js';
 import { Player } from './player/Player.js';
-import { Game } from './game/Game.js';
-import { STAND } from './game/FishStand.js';
-import { CHANDLERY } from './game/Chandlery.js';
 import { BoatController } from './player/BoatController.js';
 import { BoatSpray } from './player/BoatSpray.js';
 import { WakeSim } from './ocean/WakeSim.js';
@@ -107,6 +105,7 @@ export class App {
 		this.camera = camera;
 
 		this.input = new Input( engine.domElement );
+		if ( touchWanted() ) this.touch = new TouchControls( this.input );
 		this.fly = new FlyCamera( camera, engine.domElement, this.input );
 		this.fly.setPose( new Vector3( 20, 6, - 20 ), Math.PI * 0.9, - 0.12 );
 
@@ -338,19 +337,8 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		// ---------------------------------------------------------------- audio
 		// recorded field recordings (public/audio, credits in public/audio/CREDITS.md); ?noAudio turns it off
 		this.audio = qs.has( 'noAudio' ) ? null : new SoundScape();
+		if ( this.touch && this.audio ) this.touch.root.addEventListener( 'pointerdown', () => this.audio.resume() );
 		this.player.audio = this.audio;
-		// the fishing game (rod, bites, catch, cooler, fish stand)
-		this.game = new Game( this );
-		// the lanterns at Joe's fish stand and Marta's chandlery (lit from dusk like the village lamps);
-		// positions are in each stall's frame (x right, z toward the customer), turned by its yaw
-		for ( const [ s, lx, ly, lz ] of [ [ STAND, - 0.9, 1.85, 0.1 ], [ CHANDLERY, - 0.75, 1.58, - 1.45 ] ] ) {
-
-			const c = Math.cos( s.yaw ), sn = Math.sin( s.yaw );
-			const x = s.x + lx * c + lz * sn, z = s.z - lx * sn + lz * c;
-			this.localLights.add( { position: new Vector3( x, this.terrainData.heightAt( s.x, s.z ) + ly, z ), color: new Color( 1.0, 0.72, 0.42 ), intensity: 5 * 1.5, range: 11, kind: 'lantern', flicker: 0.08 } );
-
-		}
-
 		this.boatCtl.onSlam = ( s ) => this.audio && this.audio.hullSlap( s );
 		engine.domElement.addEventListener( 'click', () => {
 
@@ -501,6 +489,54 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 	}
 
+	isNight() {
+
+		const t = this.settings.timeOfDay;
+		return t >= 19.5 || t < 5.5;
+
+	}
+
+	// the Day / Night button: the clock runs forward to midday, or to a moonlit night, over a few
+	// seconds (sunset / sunrise play on the way)
+	toggleDayNight() {
+
+		const night = this._timeTween ? this._timeTween.to === 22 : this.isNight();
+		const from = this.settings.timeOfDay, to = night ? 12 : 22;
+		const span = ( to - from + 24 ) % 24;
+		this._timeTween = { from, to, span, t: 0, dur: 1.5 + 3 * span / 12 };
+		if ( this.ui ) this.ui.ui.toast( night ? 'Day' : 'Night' );
+
+	}
+
+	// the time slider: set the hour directly (stops a running Day / Night change)
+	setTimeOfDay( hours ) {
+
+		this._timeTween = null;
+		this.settings.timeOfDay = ( ( hours % 24 ) + 24 ) % 24;
+		if ( this.ui ) this.ui.ui.refresh();
+
+	}
+
+	_stepTimeTween( dt ) {
+
+		const w = this._timeTween;
+		if ( ! w ) return;
+		w.t = Math.min( w.dur, w.t + dt );
+		const u = w.t / w.dur, e = u * u * ( 3 - 2 * u );
+		this.settings.timeOfDay = ( w.from + w.span * e ) % 24;
+		const done = w.t >= w.dur;
+		if ( done ) this._timeTween = null;
+		// keep the settings panel's time control in step (a few times a second is enough)
+		w.r = ( w.r || 0 ) + dt;
+		if ( this.ui && ( done || w.r > 0.25 ) ) {
+
+			w.r = 0;
+			this.ui.ui.refresh();
+
+		}
+
+	}
+
 	// Free (debug) camera on F; the walker / boat resumes where it was left.
 	setFreeCam( on ) {
 
@@ -603,7 +639,8 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.updateFPS( dt );
 		G.dt.value = dt;
 		G.time.value += dt;
-		if ( s.timeSpeed !== 0 ) s.timeOfDay = ( s.timeOfDay + dt * s.timeSpeed + 24 ) % 24;
+		if ( this._timeTween ) this._stepTimeTween( dt );
+		else if ( s.timeSpeed !== 0 ) s.timeOfDay = ( s.timeOfDay + dt * s.timeSpeed + 24 ) % 24;
 
 		// ---- player / boat (boat physics first so the cameras follow this frame's pose)
 		if ( this.input.hit( 'KeyF' ) ) this.setFreeCam( ! this.freeCam );
@@ -626,7 +663,6 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.wake.update( dt );
 		if ( this.freeCam ) this.fly.update( dt );
 		else this.player.update( dt );
-		this.game.update( dt );
 		this.updateSun();
 
 		this.atmosphere.update( dt, this.camera.position.y );

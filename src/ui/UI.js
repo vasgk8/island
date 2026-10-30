@@ -1,6 +1,6 @@
 import { icon, brandMark } from './icons.js';
 
-// Tidewater UI: settings panel (tabs → folders → controls), HUD, help,
+// VASGK ISLAND UI: settings panel (tabs → folders → controls), HUD, help,
 // photo mode, start overlay and loader. Plain DOM, no dependencies.
 // All styling lives in ui.css (class prefix `tw-`).
 
@@ -1894,7 +1894,9 @@ export class UI {
 		this.onPanelInteract = null; // ( event ) pointerdown on the settings panel or rail
 		this.onPanelToggle = null; // ( open )
 		this.onHelpToggle = null; // ( open )
-		this.onReplayGuide = null; // (): the fishing game's first-play guide
+		this.onTimeToggle = null; // () the Day / Night button was clicked
+		this.onTimeSet = null; // ( hours ) the time slider was dragged
+		this.onModeChange = null; // ( 'walk' | 'fly' ) a Walk / Fly button was clicked
 		// Opening the panel exits pointer lock so the cursor can reach it.
 		this.releasePointerOnPanel = true;
 
@@ -1938,7 +1940,7 @@ export class UI {
 		this.sparkEl = stats.querySelector( '.tw-spark' );
 
 		const brand = h( 'div', 'tw-brand' );
-		brand.innerHTML = `${ brandMark() }<span class="tw-brand-name">TIDEWATER</span>`;
+		brand.innerHTML = `${ brandMark() }<span class="tw-brand-name">VASGK ISLAND</span>`;
 		this.modeEl = h( 'div', 'tw-mode is-empty', { role: 'status' } );
 		this.modeIco = h( 'span', 'tw-mode-ico' );
 		this.modeText = h( 'span', 'tw-mode-text' );
@@ -2117,6 +2119,27 @@ export class UI {
 
 		this.root.append( rail, panel );
 
+		// Walk / Fly switch, always on screen (click the mouse free with Esc first)
+		const mode = this.modeEl = h( 'div', 'tw-mode tw-glass tw-interactive', { role: 'group', 'aria-label': 'Movement mode' } );
+		this.modeBtns = {};
+		for ( const [ id, label ] of [ [ 'walk', 'Walk' ], [ 'fly', 'Fly' ] ] ) {
+
+			const b = h( 'button', 'tw-mode-btn', { type: 'button', text: label, 'aria-pressed': 'false' } );
+			b.addEventListener( 'click', () => callHook( this.onModeChange, id ) );
+			this.modeBtns[ id ] = b;
+			mode.append( b );
+
+		}
+		this.timeBtn = h( 'button', 'tw-mode-btn tw-mode-time', { type: 'button', text: 'Night', 'aria-label': 'Switch between day and night' } );
+		this.timeBtn.addEventListener( 'click', () => callHook( this.onTimeToggle ) );
+		// time of day: a slider and the clock (drag to set; it follows the sun otherwise)
+		this.timeRange = h( 'input', 'tw-mode-range', { type: 'range', min: 0, max: 24, step: 0.05, value: 12, 'aria-label': 'Time of day' } );
+		this.timeClock = h( 'span', 'tw-mode-clock', { text: '12:00' } );
+		this.timeRange.addEventListener( 'input', () => callHook( this.onTimeSet, Number( this.timeRange.value ) ) );
+		mode.append( h( 'span', 'tw-mode-sep' ), this.timeBtn, this.timeRange, this.timeClock );
+		this.root.append( mode );
+		this.setMode( 'walk' );
+
 	}
 
 	_buildHelp() {
@@ -2147,12 +2170,8 @@ export class UI {
 					</section>
 					<section>
 						<h3>Interact</h3>
-						${ row( k( 'E' ), 'Interact<small>Board, helm, step ashore, trade</small>' ) }
+						${ row( k( 'E' ), 'Interact<small>Board, helm, step ashore</small>' ) }
 						${ row( k( 'V' ), 'Boat camera<small>1st / 3rd person</small>' ) }
-						${ row( k( 'R' ), 'Fishing rod<small>Take out / put away</small>' ) }
-						${ row( k( 'LMB' ), 'Cast, strike, reel<small>Hold to wind up / reel</small>' ) }
-						${ row( k( 'RMB' ), 'Reel in an empty line' ) }
-						${ row( k( 'I' ), 'Cooler and fish log' ) }
 						${ row( k( 'F' ), 'Free camera' ) }
 						${ row( k( 'T' ), 'Pause time' ) }
 						${ row( k( 'L' ), 'Flashlight' ) }
@@ -2166,13 +2185,8 @@ export class UI {
 						${ row( k( 'Esc' ), 'Release the mouse' ) }
 					</section>
 				</div>
-				<div class="tw-help-guide">
-					<span><b>How to play:</b> catch fish, sell them to Joe at the fish stand by the pier, and buy upgrades from Marta at the chandlery by the boathouse. Both are on the map (lower right).</span>
-					<button type="button" class="gm-btn is-ghost tw-help-replay">Replay the guide</button>
-				</div>
 			</div>`;
 		el.querySelector( '.tw-help-close' ).addEventListener( 'click', () => this.toggleHelp( false ) );
-		el.querySelector( '.tw-help-replay' ).addEventListener( 'click', () => callHook( this.onReplayGuide ) );
 		el.addEventListener( 'click', ( e ) => {
 
 			if ( e.target === el ) this.toggleHelp( false );
@@ -2188,7 +2202,7 @@ export class UI {
 		el.innerHTML = `
 			<div class="tw-start-inner">
 				${ brandMark( 'tw-start-mark' ) }
-				<div class="tw-start-title">TIDEWATER</div>
+				<div class="tw-start-title">VASGK ISLAND</div>
 				<button type="button" class="tw-start-cta"><span class="tw-start-pulse" aria-hidden="true"></span>${ icon( 'mouse' ) }<span>Click to explore</span></button>
 				<div class="tw-start-keys">
 					<span><span class="tw-wasd"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Move</span>
@@ -2207,7 +2221,7 @@ export class UI {
 	_bindGlobal() {
 
 		const signal = this._ac.signal;
-		for ( const el of [ this.panel, this.rail, this.helpEl, this.startEl ] ) this._isolate( el );
+		for ( const el of [ this.panel, this.rail, this.modeEl, this.helpEl, this.startEl ] ) this._isolate( el );
 
 		const interact = ( e ) => {
 
@@ -2218,9 +2232,10 @@ export class UI {
 
 		this.panel.addEventListener( 'pointerdown', interact );
 		this.rail.addEventListener( 'pointerdown', interact );
+		this.modeEl.addEventListener( 'pointerdown', interact );
 
 		// Mouse-activated buttons give focus back so Space/Enter reach the game again.
-		for ( const el of [ this.panel, this.rail, this.helpEl ] ) {
+		for ( const el of [ this.panel, this.rail, this.modeEl, this.helpEl ] ) {
 
 			el.addEventListener( 'click', ( e ) => {
 
@@ -2576,7 +2591,7 @@ export class UI {
 		let saved = null;
 		try {
 
-			saved = localStorage.getItem( 'tidewater.ui.tab' );
+			saved = localStorage.getItem( 'vasgk.ui.tab' ) || localStorage.getItem( 'tidewater.ui.tab' ); // old key: saved before the rename
 
 		} catch { /* storage unavailable */ }
 
@@ -2632,7 +2647,7 @@ export class UI {
 
 			try {
 
-				localStorage.setItem( 'tidewater.ui.tab', tab.id );
+				localStorage.setItem( 'vasgk.ui.tab', tab.id );
 
 			} catch { /* storage unavailable */ }
 
@@ -3018,6 +3033,42 @@ export class UI {
 	}
 
 	// Brief notification. Returns a function that dismisses it early.
+	// The time button names what a click does: 'Night' by day, 'Day' by night.
+	setNight( night ) {
+
+		const t = night ? 'Day' : 'Night';
+		if ( this.timeBtn.textContent !== t ) this.timeBtn.textContent = t;
+
+	}
+
+	// The slider and clock follow the time of day (hours) unless the slider is being dragged.
+	setTime( hours ) {
+
+		const t = ( ( hours % 24 ) + 24 ) % 24;
+		const hh = Math.floor( t ), mm = Math.floor( ( t - hh ) * 60 );
+		const clock = `${ String( hh ).padStart( 2, '0' ) }:${ String( mm ).padStart( 2, '0' ) }`;
+		if ( this.timeClock.textContent !== clock ) this.timeClock.textContent = clock;
+		if ( document.activeElement !== this.timeRange ) {
+
+			const v = t.toFixed( 2 );
+			if ( this.timeRange.value !== v ) this.timeRange.value = v;
+
+		}
+
+	}
+
+	// Highlights the active Walk / Fly button.
+	setMode( id ) {
+
+		for ( const k in this.modeBtns ) {
+
+			this.modeBtns[ k ].classList.toggle( 'is-active', k === id );
+			this.modeBtns[ k ].setAttribute( 'aria-pressed', String( k === id ) );
+
+		}
+
+	}
+
 	toast( text, ms = 2500 ) {
 
 		text = String( text ?? '' );

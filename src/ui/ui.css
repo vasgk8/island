@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Tidewater UI
+   VASGK ISLAND UI
    Dark translucent glass over the ocean. Aqua is the interactive accent,
    the warm sun tone marks time, light and "modified" state.
    Every metric scales with --tw-u (≈1px at 720p, 1.25px at 1440p).
@@ -155,8 +155,8 @@ body {
 
 .loader-title {
 	margin: 0 -0.3em 0 -0.04em; /* optical: the trailing tracking and the T's side bearing */
-	/* always fits its column: 9 letters at 0.3em tracking are ~9.2em wide, trailing tracking included */
-	font-size: min(136px, 10.4cqi);
+	/* always fits its column: 12 characters at 0.3em tracking are ~12.3em wide, trailing tracking included */
+	font-size: min(102px, 7.8cqi);
 	white-space: nowrap;
 	font-weight: 600;
 	letter-spacing: 0.3em;
@@ -374,7 +374,7 @@ body {
 	.loader-title {
 		letter-spacing: 0.22em;
 		margin-right: -0.22em;
-		font-size: min(136px, 11.2cqi);
+		font-size: min(102px, 8.4cqi);
 	}
 
 }
@@ -2464,7 +2464,7 @@ body {
 
 .tw-start-title {
 	margin-right: -0.42em;
-	font-size: clamp(30px, 4.6vw, 64px);
+	font-size: clamp(24px, 3.4vw, 48px);
 	font-weight: 600;
 	letter-spacing: 0.42em;
 	line-height: 1.05;
@@ -2539,6 +2539,8 @@ body {
 
 .tw-root.is-photo .tw-panel,
 .tw-root.is-photo .tw-rail,
+.tw-root.is-photo .tw-mode,
+.tw-root.is-starting .tw-mode,
 .tw-root.is-photo .tw-help,
 .tw-root.is-photo .tw-menu,
 .tw-root.is-photo .tw-tip {
@@ -2607,4 +2609,159 @@ body {
 		width: auto;
 	}
 
+}
+
+/* Walk / Fly switch */
+.tw-mode {
+	position: absolute;
+	top: var(--tw-3);
+	left: 50%;
+	display: flex;
+	gap: calc(2 * var(--tw-u));
+	padding: calc(4 * var(--tw-u));
+	border-radius: calc(12 * var(--tw-u));
+	transform: translateX(-50%);
+}
+
+.tw-mode-btn {
+	min-width: calc(64 * var(--tw-u));
+	height: calc(30 * var(--tw-u));
+	padding: 0 calc(14 * var(--tw-u));
+	border-radius: calc(8 * var(--tw-u));
+	color: var(--tw-ink-2);
+	font-size: calc(12.5 * var(--tw-u));
+	font-weight: 600;
+	transition: color var(--tw-fast), background var(--tw-fast);
+}
+
+.tw-mode-btn:hover {
+	color: var(--tw-ink);
+	background: var(--tw-fill-2);
+}
+
+.tw-mode-btn.is-active {
+	color: var(--tw-aqua);
+	background: var(--tw-fill-2);
+}
+
+/* touch controls (src/ui/TouchControls.js): under the UI root so panels stay on top */
+.vi-touch {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	touch-action: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.vi-look {
+	position: absolute;
+	inset: 0;
+	touch-action: none;
+}
+
+.vi-stick {
+	position: absolute;
+	left: max(24px, env(safe-area-inset-left));
+	bottom: max(28px, env(safe-area-inset-bottom));
+	width: 132px;
+	height: 132px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.12);
+	border: 2px solid rgba(255, 255, 255, 0.35);
+	touch-action: none;
+}
+
+.vi-knob {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 56px;
+	height: 56px;
+	margin: -28px 0 0 -28px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.55);
+	pointer-events: none;
+}
+
+.vi-btns {
+	position: absolute;
+	right: max(20px, env(safe-area-inset-right));
+	bottom: max(28px, env(safe-area-inset-bottom));
+	display: grid;
+	grid-template-columns: repeat(2, 64px);
+	gap: 12px;
+}
+
+.vi-btn {
+	height: 64px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.14);
+	color: #fff;
+	font: 600 13px/1 var(--tw-font, system-ui, sans-serif);
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+	touch-action: none;
+}
+
+.vi-btn.is-on {
+	background: rgba(255, 255, 255, 0.4);
+}
+
+.tw-mode-sep {
+	width: 1px;
+	margin: calc(6 * var(--tw-u)) calc(2 * var(--tw-u));
+	background: var(--tw-fill-2);
+}
+
+.tw-mode-range {
+	width: calc(110 * var(--tw-u));
+	margin: 0 calc(4 * var(--tw-u)) 0 calc(6 * var(--tw-u));
+	accent-color: var(--tw-aqua);
+	align-self: center;
+	cursor: pointer;
+}
+
+.tw-mode-clock {
+	align-self: center;
+	min-width: calc(40 * var(--tw-u));
+	padding-right: calc(8 * var(--tw-u));
+	font: 500 calc(12 * var(--tw-u)) var(--tw-mono);
+	color: var(--tw-ink-2);
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+	.tw-mode-range { width: calc(70 * var(--tw-u)); }
+	.tw-mode-clock { display: none; }
+}
+
+.vi-photo {
+	position: absolute;
+	/* left of the Jump / E buttons, clear of the settings rail on short screens */
+	right: calc(max(20px, env(safe-area-inset-right)) + 2 * 64px + 12px + 16px);
+	bottom: calc(max(28px, env(safe-area-inset-bottom)) + 64px + 12px + 8px);
+	width: 48px;
+	height: 48px;
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.14);
+	color: #fff;
+	touch-action: none;
+}
+
+.vi-photo svg {
+	width: 24px;
+	height: 24px;
+}
+
+.vi-touch.is-photo .vi-stick,
+.vi-touch.is-photo .vi-btns {
+	display: none;
+}
+
+.vi-touch.is-photo .vi-photo {
+	opacity: 0.35;
 }

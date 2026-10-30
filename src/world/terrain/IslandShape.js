@@ -8,10 +8,6 @@
 export const RIDGES = [
 	// main east-west divide with the summit north of the bay
 	[ [ - 480, - 360, 40 ], [ - 380, - 410, 110 ], [ - 250, - 460, 150 ], [ - 120, - 495, 178 ], [ - 35, - 510, 215 ], [ 50, - 495, 176 ], [ 150, - 470, 168 ], [ 270, - 430, 124 ], [ 400, - 360, 60 ], [ 470, - 320, 25 ] ],
-	// west headland spur
-	[ [ - 250, - 460, 140 ], [ - 262, - 340, 100 ], [ - 272, - 200, 66 ], [ - 278, - 70, 48, 120 ], [ - 274, 60, 36, 100 ], [ - 264, 165, 20, 70 ] ],
-	// east headland spur
-	[ [ 150, - 470, 155 ], [ 240, - 340, 108 ], [ 284, - 190, 70 ], [ 294, - 50, 50, 125 ], [ 294, 80, 36, 105 ], [ 290, 190, 18, 70 ] ],
 	// central spur behind the village
 	[ [ - 35, - 505, 195 ], [ - 15, - 410, 138 ], [ 8, - 330, 80, 180 ], [ 22, - 275, 38, 110 ] ],
 	// minor spurs framing the valley
@@ -70,10 +66,7 @@ export function ridgeEnvelope( x, z ) {
 }
 
 // Sea stacks off the headland tips: [x, z, radius, height]
-export const SEA_STACKS = [
-	[ - 272, 216, 9, 17 ], [ - 300, 196, 6, 11 ], [ - 244, 240, 5.5, 8 ], [ - 316, 152, 7, 13 ], [ - 286, 238, 4, 6 ],
-	[ 298, 252, 10, 19 ], [ 262, 246, 6, 10 ], [ 328, 228, 7, 12 ], [ 322, 186, 5, 9 ], [ 280, 272, 4.5, 7 ],
-];
+export const SEA_STACKS = [];
 
 // Footpaths (x, z polylines) with half widths. Worn into the ground (darkened + slightly sunken).
 export const PATHS = [
@@ -81,6 +74,8 @@ export const PATHS = [
 	{ w: 1.1, pts: [ [ 21, - 56 ], [ 20, - 68 ], [ 18.5, - 80 ], [ 16.5, - 92 ], [ 15.5, - 100 ], [ 20, - 102.5 ], [ 28, - 104.5 ], [ 35.5, - 108.5 ] ] },
 	// plaza north up the valley and onto the central spur (hiking trail)
 	{ w: 0.6, pts: [ [ 42, - 116.5 ], [ 45.5, - 126 ], [ 48, - 138 ], [ 49, - 150 ], [ 49.5, - 162 ], [ 47, - 175 ], [ 41, - 188 ], [ 36, - 199 ], [ 31, - 212 ], [ 33, - 224 ], [ 26, - 236 ], [ 20, - 247 ], [ 24, - 258 ], [ 16, - 270 ], [ 11, - 283 ], [ 15, - 296 ], [ 8, - 309 ], [ 4, - 322 ] ] },
+	// from the hiking trail across to the porch of the house
+	{ w: 0.7, pts: [ [ 45.8, - 128 ], [ 41, - 134 ], [ 35.5, - 140 ], [ 31, - 143.5 ] ] },
 	// east: boathouse up to the boardwalk
 	{ w: 0.9, pts: [ [ 88, - 62 ], [ 80, - 72 ], [ 70, - 80 ], [ 60, - 86 ], [ 54.5, - 90 ] ] },
 	// west: along the back of the beach to the western grove

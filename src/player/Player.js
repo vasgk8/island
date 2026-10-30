@@ -86,8 +86,6 @@ export class Player {
 		this.deckGrounded = true;
 		this._ashore = null; // cached step-ashore target
 		this._ashoreT = 0;
-		// set by the fishing game: while a line is out the helm / step ashore prompts give way
-		this.busy = false;
 
 	}
 
@@ -157,8 +155,7 @@ export class Player {
 		this.yaw -= look.x * 0.0022;
 		this.pitch = THREE.MathUtils.clamp( this.pitch - look.y * 0.0022, - 1.5, 1.5 );
 
-		// (not with a line out or a fish in hand: E belongs to the fishing then)
-		if ( this.nearBoat() && ! this.busy ) {
+		if ( this.nearBoat() ) {
 
 			this.prompt = { key: 'E', text: 'Board boat' };
 			if ( inp.hit( 'KeyE' ) ) {
@@ -206,12 +203,8 @@ export class Player {
 		const inp = this.input;
 		_fwd.set( - Math.sin( this.yaw ), 0, - Math.cos( this.yaw ) );
 		_right.set( - _fwd.z, 0, _fwd.x );
-		const wish = new THREE.Vector3();
-		if ( inp.down( 'KeyW' ) ) wish.add( _fwd );
-		if ( inp.down( 'KeyS' ) ) wish.sub( _fwd );
-		if ( inp.down( 'KeyD' ) ) wish.add( _right );
-		if ( inp.down( 'KeyA' ) ) wish.sub( _right );
-		if ( wish.lengthSq() > 0 ) wish.normalize();
+		const mv = inp.move(); // analog: a half-pushed stick walks at half speed
+		const wish = new THREE.Vector3().addScaledVector( _fwd, mv.y ).addScaledVector( _right, mv.x );
 
 		const depth = this.waterH - this.position.y; // water depth at the feet
 		const wade = THREE.MathUtils.clamp( depth / 1.2, 0, 1 );
@@ -304,14 +297,11 @@ export class Player {
 		// look-relative movement (diving follows the view)
 		_fwd.set( 0, 0, - 1 ).applyEuler( _e.set( this.pitch, this.yaw, 0 ) );
 		_right.set( - Math.cos( this.yaw ), 0, Math.sin( this.yaw ) ).negate();
-		const wish = new THREE.Vector3();
-		if ( inp.down( 'KeyW' ) ) wish.add( _fwd );
-		if ( inp.down( 'KeyS' ) ) wish.sub( _fwd );
-		if ( inp.down( 'KeyD' ) ) wish.add( _right );
-		if ( inp.down( 'KeyA' ) ) wish.sub( _right );
+		const mv = inp.move();
+		const wish = new THREE.Vector3().addScaledVector( _fwd, mv.y ).addScaledVector( _right, mv.x );
 		if ( inp.down( 'Space' ) ) wish.y += 1;
 		if ( inp.down( 'KeyC' ) || inp.down( 'ControlLeft' ) ) wish.y -= 1;
-		if ( wish.lengthSq() > 0 ) wish.normalize();
+		if ( wish.lengthSq() > 1 ) wish.normalize();
 
 		const atSurface = this.floating && p.y > surfaceY - 0.45;
 		// at the surface W along a level view keeps you on top; looking down dives
@@ -326,7 +316,7 @@ export class Player {
 		// they swim to (neutral buoyancy, nothing pulls them back up) until they swim up to the
 		// surface again.
 		const eyeTarget = surfaceY - SWIM_EYE + 0.1; // eyes ~10 cm above the water; waves still wash over
-		const diving = inp.down( 'KeyC' ) || ( inp.down( 'KeyW' ) && this.pitch < - 0.35 ) || wish.y < - 0.1;
+		const diving = inp.down( 'KeyC' ) || ( mv.y > 0.5 && this.pitch < - 0.35 ) || wish.y < - 0.1;
 		if ( diving ) this.floating = false;
 		else if ( p.y > eyeTarget - 0.15 ) this.floating = true;
 		if ( this.floating ) {
@@ -380,7 +370,7 @@ export class Player {
 				if ( Math.hypot( b.center.x - p.x, b.center.z - p.z ) < 1.1 ) {
 
 					this.prompt = { key: 'Space', text: 'Climb ladder' };
-					if ( inp.down( 'Space' ) || inp.down( 'KeyW' ) ) {
+					if ( inp.down( 'Space' ) || inp.move().y > 0.5 ) {
 
 						const top = this.colliders.groundHeightAt( b.center.x, b.center.z, 10 );
 						if ( top > p.y ) {
@@ -597,12 +587,8 @@ export class Player {
 		const sy = Math.sin( this.deckYaw ), cy = Math.cos( this.deckYaw );
 		_fwd.set( sy, 0, cy );
 		_right.set( - cy, 0, sy );
-		_wish.set( 0, 0, 0 );
-		if ( inp.down( 'KeyW' ) ) _wish.add( _fwd );
-		if ( inp.down( 'KeyS' ) ) _wish.sub( _fwd );
-		if ( inp.down( 'KeyD' ) ) _wish.add( _right );
-		if ( inp.down( 'KeyA' ) ) _wish.sub( _right );
-		if ( _wish.lengthSq() > 0 ) _wish.normalize();
+		const mv = inp.move();
+		_wish.set( 0, 0, 0 ).addScaledVector( _fwd, mv.y ).addScaledVector( _right, mv.x );
 		const speed = ( inp.down( 'ShiftLeft' ) ? 2.6 : 1.6 );
 		const k = 1 - Math.exp( - 12 * dt );
 		const v = this.deckVel;
@@ -668,7 +654,7 @@ export class Player {
 
 		// prompts: take the helm, or step ashore
 		const hx = HOUSE_HELM.x, hz = HOUSE_HELM.z;
-		const nearHelm = Math.hypot( p.x - hx, p.z - hz ) < HELM_REACH && ! this.busy;
+		const nearHelm = Math.hypot( p.x - hx, p.z - hz ) < HELM_REACH;
 		this._ashoreT -= dt;
 		if ( this._ashoreT <= 0 ) {
 
@@ -687,7 +673,7 @@ export class Player {
 
 			}
 
-		} else if ( ! this.busy ) {
+		} else {
 
 			// at the rail: step ashore where there is ground on that side, else jump into the sea
 			const ep = this._ashore && this._ashore.ep;
@@ -740,12 +726,9 @@ export class Player {
 
 		}
 
-		let throttle = 0;
-		if ( inp.down( 'KeyW' ) ) throttle = inp.down( 'ShiftLeft' ) ? 1 : 0.7;
-		if ( inp.down( 'KeyS' ) ) throttle = - 0.6;
-		let steer = 0;
-		if ( inp.down( 'KeyA' ) ) steer += 1;
-		if ( inp.down( 'KeyD' ) ) steer -= 1;
+		const mv = inp.move();
+		const throttle = mv.y > 0 ? mv.y * ( inp.down( 'ShiftLeft' ) ? 1 : 0.7 ) : mv.y * 0.6;
+		const steer = - mv.x;
 		b.setInput( throttle, steer, dt );
 		this.prompt = { key: 'E', text: 'Leave helm   ·   V  camera' };
 

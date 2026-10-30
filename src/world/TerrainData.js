@@ -18,8 +18,12 @@ const ellipseDist = ( x, z, cx, cz, rx, rz ) => {
 };
 
 // central bay: the beach and its underwater profile stay smooth (the surf is tuned for it)
-const beachZoneAt = ( x, z ) => ( 1 - smoothstep( 120, 205, Math.abs( x - 10 ) ) ) * ( 1 - smoothstep( 40, 140, z + 40 ) ) * smoothstep( - 260, - 120, z );
+const beachZoneAt = ( x, z ) => Math.max(
+	( 1 - smoothstep( 120, 205, Math.abs( x - 10 ) ) ) * ( 1 - smoothstep( 40, 140, z + 40 ) ) * smoothstep( - 260, - 120, z ),
+	// the long west beach where the main body was cut back: no cliffs, a smooth shelf into the sea
+	Math.max( smoothstep( - 40, - 110, x ), smoothstep( 130, 200, x ) ) * smoothstep( - 760, - 560, z ) * ( 1 - smoothstep( - 90, - 20, z ) ) );
 
+const WEST_CUT = - 300, EAST_CUT = 270;
 const RES = 2048; // 1 m texels over the 2048 m domain
 
 // volcanic plugs on the summit ridge: [x, z, radius, height above the envelope]
@@ -124,10 +128,12 @@ export class TerrainData {
 
 	_coast( x, z, F, bz ) {
 
-		const dBody = ellipseDist( x, z, 0, - 442, 565, 400 );
-		const dW = ellipseDist( x, z, - 272, - 25, 92, 205 );
-		const dE = ellipseDist( x, z, 288, - 12, 108, 228 );
-		let d = smin( dBody, smin( dW, dE, 40 ), 75 );
+		// both ends of the main body are cut back to open sea at x = WEST_CUT / EAST_CUT (soft edge)
+		// (the cut lines wander a little so the long beaches do not run dead straight)
+		const n = this.noise;
+		const wc = WEST_CUT + n.fbm( z / 230, 1.7, 3 ) * 60, ec = EAST_CUT + n.fbm( z / 230, 8.3, 3 ) * 48;
+		const dBody = - smin( smin( - ellipseDist( x, z, 0, - 442, 565, 400 ), x - wc, 70 ), ec - x, 70 );
+		let d = dBody; // no headlands: open sea and sand either side of the bay
 		d += F.f170 * 34 * ( 1 - 0.9 * bz );
 		if ( bz < 1 ) d += this.noise.fbm( x / 38, z / 38, 3 ) * 7 * ( 1 - bz );
 		d += F.und * 5 * bz; // gentle beach undulation
@@ -143,10 +149,7 @@ export class TerrainData {
 		const d = this._coast( x, z, F, bz );
 
 		// rocky headlands and outer coast
-		const headland = Math.max(
-			1 - smoothstep( 60, 140, Math.hypot( ( x + 272 ) * 0.9, ( z + 25 ) * 0.45 ) ),
-			1 - smoothstep( 60, 150, Math.hypot( ( x - 288 ) * 0.9, ( z + 12 ) * 0.45 ) ) );
-		const rm = Math.max( headland, 1 - bz * 1.4 );
+		const rm = 1 - bz * 1.4;
 		let rock = 0;
 		if ( rm > 0.35 ) rock = smoothstep( 0.35, 0.75, clamp( rm * ( 0.55 + 0.45 * n2.fbm( x / 60, z / 60, 3 ) ), 0, 1 ) );
 
@@ -212,15 +215,17 @@ export class TerrainData {
 			// (an elongated valley reaching north into the massif, like the bays of Moorea)
 			const bay = 1 - smoothstep( 120, 230, Math.abs( x - 22 - ( z + 100 ) * 0.08 + n.noise( z / 120, 3.7 ) * 30 ) );
 			const open = bay * ( 1 - smoothstep( 70, 340, e + n.noise( x / 80, z / 80 ) * 30 ) );
-			if ( F.E > 0.01 && open < 1 ) {
+			// the massif fades out toward the west so the land runs down to the beach without a wall
+			const wf = smoothstep( - 230, 90, x ) * ( 1 - smoothstep( 30, 300, x ) ), E = F.E * wf, gx = F.gx * wf, gz = F.gz * wf;
+			if ( E > 0.01 && open < 1 ) {
 
-				let m = F.E;
-				const slope = Math.sqrt( F.gx * F.gx + F.gz * F.gz );
+				let m = E;
+				const slope = Math.sqrt( gx * gx + gz * gz );
 				if ( slope > 0.005 ) {
 
 					// meandering: warp the lookup a little so the gullies do not run dead straight
 					const mx = x + n.noise( x / 45, z / 45 ) * 14, mz = z + n.noise( x / 45 + 9.1, z / 45 - 4.3 ) * 14;
-					carve = erosionNoise( mx, mz, F.gx, F.gz, 5, 160, Math.min( 30, 0.16 * F.E ) );
+					carve = erosionNoise( mx, mz, gx, gz, 5, 160, Math.min( 30, 0.16 * E ) );
 					m += carve;
 
 				}
@@ -241,7 +246,7 @@ export class TerrainData {
 					const wall = smoothstep( 1.0, 0.72, u );
 					const apron = ( 1 - smoothstep( 0.9, 1.3, u ) ) * 0.12;
 					const crown = 1 - 0.35 * u * u + n2.ridged( x / 19, z / 19, 3 ) * 0.35 - 0.15;
-					m += H * ( wall * crown + apron );
+					m += H * wf * ( wall * crown + apron ); // plugs fade out with the massif
 
 				}
 
@@ -295,7 +300,7 @@ export class TerrainData {
 				Aund[ k ] = n.fbm( x / 260, z / 90, 2 );
 				Adeep[ k ] = n.fbm( x / 220, z / 220, 4 );
 				// massif envelope only over the island body
-				if ( ellipseDist( x, z, 0, - 442, 640, 470 ) < 0 || ellipseDist( x, z, - 272, - 25, 160, 280 ) < 0 || ellipseDist( x, z, 288, - 12, 170, 300 ) < 0 ) {
+				if ( ellipseDist( x, z, 0, - 442, 640, 470 ) < 0 || ellipseDist( x, z, 288, - 12, 170, 300 ) < 0 ) {
 
 					AE[ k ] = ridgeEnvelope( wx + n3.fbm( x / 130, z / 130, 2 ) * 28, wz + n3.fbm( x / 130 + 5.2, z / 130 - 1.7, 2 ) * 28 );
 
@@ -660,6 +665,7 @@ export class TerrainData {
 			// gaps: village core, pier foot, footpaths, rock
 			const vd = Math.hypot( ( x - VILLAGE.x ) * 0.8, z - VILLAGE.z );
 			let gap = smoothstep( 45, 70, vd ) * smoothstep( 10, 22, Math.abs( x - WORLD.pier.x ) ) * ( 1 - smoothstep( 0.15, 0.4, R0[ k ] ) );
+			gap *= 1 - smoothstep( 110, 180, Math.abs( x - 10 ) ); // only behind the bay beach, not along the long side beaches
 			for ( const p of PATHS ) {
 
 				const [ dist ] = polylineDistance( p.pts, x, z );

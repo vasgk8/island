@@ -1,20 +1,18 @@
 import { WORLD } from '../world/WorldLayout.js';
-import { STAND } from './FishStand.js';
-import { CHANDLERY } from './Chandlery.js';
 
-// Minimap, lower right: the island baked once from the terrain data into a 2D canvas (depth-tinted
-// sea, reef and seagrass, sand, grass and forest by height, rock, paths, village pads, the pier,
-// hill shading and a coastline), shown in a round window that turns with the view (forward is up,
-// a small N on the rim). Markers: the player (centre arrow), Joe's fish stand, Marta's chandlery
-// and the boat; markers beyond the rim sit on it with an arrow. With the fish finder upgrade, a
-// couple of soft rings mark the richest water in view.
+// Minimap, lower right (upper right with touch controls): the island baked once from the terrain
+// data into a 2D canvas (depth-tinted sea, reef and seagrass, sand, grass and forest by height, rock,
+// paths, building pads, the pier, hill shading and a coastline), shown in a round window that turns
+// with the view (forward is up, a small N on the rim). Markers: the player (centre arrow), the
+// house, the lookout, the beach huts, the jetty and the boat; markers beyond the rim sit on it
+// with an arrow.
 //
 // Per frame it only writes a few CSS transforms. The bake runs in row chunks over the first frames.
-//   const map = new Minimap( hudEl, game );  map.update( dt );  map.highlight( [ 'joe', 'marta' ] )
+//   const map = new Minimap( hudEl, app );  map.update( dt );
 
 const N = 640; // baked canvas size (px)
 const EXT = 1280; // metres covered by the bake
-const X0 = - EXT / 2, Z0 = - 180 - EXT / 2; // world at canvas (0, 0): the island sits north of the bay
+const X0 = - EXT / 2, Z0 = - 260 - EXT / 2; // world at canvas (0, 0): the island sits north of the bay
 const PPM = N / EXT; // canvas px per metre
 const ROWS_PER_FRAME = 48;
 
@@ -34,38 +32,33 @@ const CSS = /* css */`
 	margin: calc(-10 * var(--tw-u)) 0 0 calc(-10 * var(--tw-u)); border-radius: 50%; font: 700 calc(10 * var(--tw-u)) var(--tw-font); font-style: normal;
 	color: #0b1418; box-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.85); }
 .gm-mk > i svg { width: 64%; height: 64%; }
-.gm-mk.is-joe > i { background: var(--tw-sun); }
-.gm-mk.is-marta > i { background: var(--tw-aqua); }
+.gm-mk.is-home > i { background: var(--tw-sun); }
+.gm-mk.is-view > i { background: #c9e6a0; }
+.gm-mk.is-hut > i { background: #f2c48a; }
+.gm-mk.is-jetty > i { background: var(--tw-aqua); }
 .gm-mk.is-boat > i { background: #f2efe6; }
 .gm-mk > b { position: absolute; left: 0; top: 0; width: 0; height: 0; border-left: calc(5 * var(--tw-u)) solid transparent; border-right: calc(5 * var(--tw-u)) solid transparent;
 	border-bottom: calc(7 * var(--tw-u)) solid rgba(255,255,255,0.9); margin: calc(-19 * var(--tw-u)) 0 0 calc(-5 * var(--tw-u)); transform-origin: calc(5 * var(--tw-u)) calc(19 * var(--tw-u)); display: none; }
 .gm-mk.is-edge > b { display: block; }
 .gm-mk.is-edge > i { transform: scale(0.82); }
-.gm-mk.is-hot > i { animation: gm-map-pulse 1.3s var(--tw-ease-io) infinite; }
-@keyframes gm-map-pulse { 0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.85), 0 0 0 0 rgba(255,255,255,0.6); }
-	60% { box-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.85), 0 0 0 calc(10 * var(--tw-u)) rgba(255,255,255,0); } }
 .gm-map-me { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
 .gm-map-me svg { position: absolute; width: calc(18 * var(--tw-u)); height: calc(18 * var(--tw-u)); left: calc(-9 * var(--tw-u)); top: calc(-10 * var(--tw-u));
 	filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
 .gm-map-n { position: absolute; left: 0; top: 0; width: calc(14 * var(--tw-u)); height: calc(14 * var(--tw-u)); margin: calc(-7 * var(--tw-u)) 0 0 calc(-7 * var(--tw-u));
 	border-radius: 50%; display: grid; place-items: center; font: 700 calc(9 * var(--tw-u)) var(--tw-font); color: #0b1418; background: rgba(255,255,255,0.9);
 	box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-.gm-map-fish { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; transition: opacity 600ms var(--tw-ease); }
-.gm-map-fish.is-on { opacity: 0.9; }
-.gm-map-fish > i { position: absolute; left: calc(-12 * var(--tw-u)); top: calc(-12 * var(--tw-u)); width: calc(24 * var(--tw-u)); height: calc(24 * var(--tw-u));
-	border-radius: 50%; border: 1.5px solid rgba(var(--tw-aqua-rgb), 0.9); animation: gm-map-ring 2.2s var(--tw-ease-io) infinite; }
-.gm-map-fish > i + i { animation-delay: -1.1s; }
-@keyframes gm-map-ring { 0% { transform: scale(0.45); } 100% { transform: scale(1.15); border-color: rgba(var(--tw-aqua-rgb), 0); } }
 .gm-map-label { position: absolute; left: 50%; bottom: calc(-2 * var(--tw-u)); transform: translate(-50%, 100%); padding-top: calc(4 * var(--tw-u));
 	font: 500 var(--tw-fs-xs) var(--tw-mono); color: var(--tw-ink-3); white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.7); display: none; }
 /* short windows: the settings rail (right, vertically centred) reaches down to the corner */
 @media (max-height: 860px) { .gm-map { right: calc(var(--tw-edge) + 58 * var(--tw-u)); } }
 @media (max-width: 640px) { .gm-map { width: calc(128 * var(--tw-u)); height: calc(128 * var(--tw-u)); } }
-@media (prefers-reduced-motion: reduce) { .gm-mk.is-hot > i, .gm-map-fish > i { animation: none; } }
+html.has-touch .gm-map { bottom: auto; top: calc(var(--tw-edge) + 56 * var(--tw-u)); }
 `;
 
 const ICON = {
-	fish: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12c3-4 7-6 11-6 3 0 5 2 7 4l-2 2 2 2c-2 2-4 4-7 4-4 0-8-2-11-6Zm12-1.2a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"/></svg>',
+	home: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3L12 3Z"/></svg>',
+	view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M3 19 9 9l4 6 3-4 5 8H3Z"/></svg>',
+	hut: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 11h3v9h14v-9h3L12 3Zm-2 17v-5h4v5h-4Z"/></svg>',
 	anchor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M7 11h10M4 14c1 4 4 6 8 6s7-2 8-6"/></svg>',
 	boat: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9H6l6-9Zm1 2 5 7h-5V5ZM3 14h18l-3 5H6l-3-5Z"/></svg>',
 };
@@ -98,9 +91,9 @@ const C = {
 
 export class Minimap {
 
-	constructor( parent, game ) {
+	constructor( parent, app ) {
 
-		this.game = game;
+		this.app = app;
 		const style = h( 'style' );
 		style.textContent = CSS;
 		document.head.append( style );
@@ -122,30 +115,30 @@ export class Minimap {
 
 		};
 
+		// fixed places (Village.js: the house, the lookout, the beach huts, the jetty)
+		const at = ( x, z ) => () => ( { x, z } );
 		this.markers = [
-			{ id: 'joe', ...mk( 'joe', ICON.fish ), pos: () => ( { x: STAND.x, z: STAND.z } ) },
-			{ id: 'marta', ...mk( 'marta', ICON.anchor ), pos: () => ( { x: CHANDLERY.x, z: CHANDLERY.z } ) },
+			{ id: 'home', ...mk( 'home', ICON.home ), pos: at( 30.5, - 149 ) },
+			{ id: 'view', ...mk( 'view', ICON.view ), pos: at( 4, - 318 ) },
+			{ id: 'hutW', ...mk( 'hut', ICON.hut ), pos: at( - 236, - 196 ) },
+			{ id: 'hutE', ...mk( 'hut', ICON.hut ), pos: at( 226, - 172 ) },
+			{ id: 'jetty', ...mk( 'jetty', ICON.anchor ), pos: at( 300, - 200 ) },
 			{ id: 'boat', ...mk( 'boat', ICON.boat ), pos: () => {
 
-				const b = game.app.boatCtl;
+				const b = app.boatCtl;
 				return b ? { x: b.position.x, z: b.position.z } : null;
 
 			}, hideWhen: () => {
 
-				const p = game.app.player;
+				const p = app.player;
 				return p.mode === 'boat' || p.mode === 'deck';
 
 			} },
 		];
 		this.north = h( 'div', 'gm-map-n', 'N' );
 		this.marks.append( this.north );
-		this.fish = [ h( 'div', 'gm-map-fish', '<i></i><i></i>' ), h( 'div', 'gm-map-fish', '<i></i><i></i>' ) ];
-		this.fish.forEach( ( f ) => this.marks.prepend( f ) );
-		this._fishPts = [];
-		this._fishT = 0;
 
 		this.radiusM = 110; // world radius shown (m), eased between on foot and at sea
-		this._hot = new Set();
 		this._size = 0;
 		this._bake = { row: 0, ctx: this.canvas.getContext( '2d' ), img: null, h: null, done: false };
 		this._bake.img = this._bake.ctx.createImageData( N, N );
@@ -185,19 +178,12 @@ export class Minimap {
 
 	}
 
-	highlight( ids = [] ) {
-
-		this._hot = new Set( ids );
-		for ( const m of this.markers ) this._toggle( m.el, 'is-hot', this._hot.has( m.id ) );
-
-	}
-
 	// ---- bake (chunked)
 	_bakeStep() {
 
 		const B = this._bake;
 		if ( B.done ) return;
-		const T = this.game.app.terrainData;
+		const T = this.app.terrainData;
 		const res = T.res, tex = T.texel, org = T.origin;
 		const idx = ( x, z ) => {
 
@@ -310,7 +296,7 @@ export class Minimap {
 	update( dt ) {
 
 		this._bakeStep();
-		const app = this.game.app, cam = app.camera, p = app.player;
+		const app = this.app, cam = app.camera, p = app.player;
 		if ( this._viewSize < 0 || ! this._ro ) this._viewSize = this.view.clientWidth;
 		const size = this._viewSize;
 		if ( ! size ) return;
@@ -373,55 +359,6 @@ export class Minimap {
 
 		// the N on the rim
 		place( this.north, 0, - 1e6, 9 );
-
-		// fish finder: the richest water nearby, refreshed now and then
-		const finder = this.game.state.stats.finder;
-		this._fishT -= dt;
-		if ( finder && this._fishT <= 0 ) {
-
-			this._fishT = 1.5;
-			this._fishPts = this._richest( x, z, this.radiusM * 0.85 );
-
-		}
-
-		for ( let i = 0; i < this.fish.length; i ++ ) {
-
-			const q = finder ? this._fishPts[ i ] : null;
-			this._toggle( this.fish[ i ], 'is-on', !! q );
-			if ( q ) place( this.fish[ i ], q.x - x, q.z - z, 14 );
-
-		}
-
-	}
-
-	// the two richest points on a coarse polar grid around (x, z), at least 25 m apart
-	_richest( x, z, r ) {
-
-		const g = this.game, T = g.app.terrainData;
-		const pts = [];
-		for ( let ring = 1; ring <= 3; ring ++ ) for ( let a = 0; a < 12; a ++ ) {
-
-			const ang = ( a / 12 ) * Math.PI * 2 + ring * 0.4, d = r * ring / 3;
-			const px = x + Math.cos( ang ) * d, pz = z + Math.sin( ang ) * d;
-			const depth = - T.heightAt( px, pz );
-			if ( depth < 1 ) continue;
-			const hab = g.habitatAtPoint( px, pz, depth );
-			let rich = 0;
-			for ( const k in hab ) rich += hab[ k ];
-			if ( rich > 0.7 ) pts.push( { x: px, z: pz, rich } );
-
-		}
-
-		pts.sort( ( a, b ) => b.rich - a.rich );
-		const out = [];
-		for ( const q of pts ) if ( out.every( ( o ) => Math.hypot( o.x - q.x, o.z - q.z ) > 25 ) ) {
-
-			out.push( q );
-			if ( out.length === 2 ) break;
-
-		}
-
-		return out;
 
 	}
 

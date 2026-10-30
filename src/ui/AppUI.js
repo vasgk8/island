@@ -1,9 +1,10 @@
 import * as THREE from '../engine/index.js';
 import { UI } from './UI.js';
+import { Minimap } from './Minimap.js';
 import { G } from '../core/Globals.js';
 import { GroundBounce } from '../materials/GroundBounce.js';
 
-// Binds the Tidewater UI (panel + HUD) to the running app.
+// Binds the VASGK ISLAND UI (panel + HUD) to the running app.
 const SEA = {
 	Calm: { wind: 3.5, fetch: 40, chop: 0.75, swell: 0.28, surf: 0.18, period: 11, whitecaps: 0.2 },
 	Breezy: { wind: 7, fetch: 120, chop: 0.9, swell: 0.48, surf: 0.34, period: 9, whitecaps: 0.5 },
@@ -17,6 +18,17 @@ export class AppUI {
 
 		this.app = app;
 		this.ui = ui;
+		ui.onModeChange = ( id ) => app.setFreeCam( id === 'fly' );
+		ui.onTimeToggle = () => app.toggleDayNight();
+		ui.onTimeSet = ( h ) => app.setTimeOfDay( h );
+		if ( app.touch ) {
+
+			app.touch.onPhoto = () => ui.setPhotoMode( ! ui._photo );
+			ui.onPhotoMode = [ ...[ ui.onPhotoMode ].flat().filter( Boolean ), ( on ) => app.touch.setPhotoMode( on ) ];
+
+		}
+		// the minimap (lower right, upper right with touch controls)
+		this.minimap = typeof document !== 'undefined' ? new Minimap( ui.hud || ui.root, app ) : null;
 		const fft = app.fft;
 		const shore = app.shore;
 
@@ -194,6 +206,7 @@ export class AppUI {
 			app.camera.updateProjectionMatrix();
 
 		} } );
+		view.addSlider( { label: 'Look speed', object: app.input, key: 'lookScale', min: 0.3, max: 3, step: 0.05, tooltip: 'How fast the view turns with the mouse or a touch drag.' } );
 		view.addButton( { label: 'Free camera (F)', icon: 'camera', onClick: () => app.setFreeCam( ! app.freeCam ) } );
 
 		// ---------------------------------------------------------------- Effects
@@ -252,6 +265,10 @@ export class AppUI {
 		const ui = this.ui;
 		ui.setStats( { fps: app.fps, frameMs: dt * 1000 } );
 		this.s.renderScale = app.post.scale;
+		ui.setMode( app.freeCam ? 'fly' : 'walk' );
+		ui.setNight( app.isNight() );
+		ui.setTime( app.settings.timeOfDay );
+		if ( this.minimap ) this.minimap.update( dt );
 
 		const p = app.player;
 		if ( app.freeCam ) {

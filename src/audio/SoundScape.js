@@ -84,22 +84,7 @@ export const MIX = {
 	whaleSplash: - 11, // breach re-entry, at 12 m
 	whaleDrip: - 30, // water sheeting off the raised flukes, at 8 m
 	whaleFluke: - 22, // the flukes slipping under, at 10 m
-	// fishing: the rod and reel are in your hands (close, a little to the right), the bobber out on the water
-	rodSwish: - 30, // a full-power cast whooshing past (weaker casts quieter)
-	bail: - 40, // the bail wire flipping open / snapping shut
-	lineOut: - 38, // line peeling off the spool as the cast flies out
-	plop: - 30, // the bobber landing, at 4 m (falls off with distance)
-	reelWind: - 36, // cranking steadily
-	reelDrag: - 29, // the drag screaming under a fast run
-	lineStrain: - 44, // line creaking at the breaking point
-	lineSnap: - 24, // the line parting
-	fishSplash: - 24, // a hooked fish thrashing at the surface, at 6 m
-	fishFlop: - 32, // the landed fish flapping on the line in front of you
-	coins: - 30, // paid at the stand
 };
-
-// the fishing sounds (loaded when the rod comes out)
-const FISHING = [ 'reel_wind', 'reel_drag', 'line_strain', 'rod_swish', 'bail_click', 'line_out', 'plop', 'line_snap', 'fish_splash', 'fish_flop' ];
 
 // forest bird sprite: slices per source recording (a singer sings from one of them)
 const FOREST = [ [ 0, 1, 2, 3, 4, 5, 6 ], [ 7, 8, 9, 10, 11, 12 ] ];
@@ -114,7 +99,7 @@ const STEP = {
 };
 
 // max simultaneous one-shot voices per category (oldest is faded out beyond this)
-const LIMITS = { step: 3, swim: 2, splash: 3, trans: 2, hull: 3, gull: 2, crash: 7, wash: 5, back: 5, bird: 4, tern: 2, whale: 4, rod: 4, fish: 3, coin: 1 };
+const LIMITS = { step: 3, swim: 2, splash: 3, trans: 2, hull: 3, gull: 2, crash: 7, wash: 5, back: 5, bird: 4, tern: 2, whale: 4 };
 
 // loaded at resume(); everything else on first use
 const CORE = [ 'surf_crash', 'surf_wash', 'surf_backwash', 'surf_far', 'wind', 'palms', 'step_sand', 'step_wetsand', 'step_wood', 'step_water', 'step_grass', 'splash', 'swim' ];
@@ -275,7 +260,6 @@ export class SoundScape {
 			this._life( step );
 			this._birds( now, step );
 			this._whale( now, step );
-			this._reel( now );
 
 		} catch ( e ) {
 
@@ -340,100 +324,6 @@ export class SoundScape {
 		const s = clamp( num( strength, 0.5 ), 0, 1 );
 		this._shot( 'hull_slap', 'hull', this.boatSum, MIX.hullSlap - ( 1 - s ) * 10, 0.85 + Math.random() * 0.2 );
 		if ( s > 0.45 ) this._shot( 'splash', 'hull', this.boatSum, MIX.spray - ( 1 - s ) * 6, 1.15 + Math.random() * 0.2 );
-
-	}
-
-	// ------------------------------------------------------------------ fishing (src/game)
-
-	// the rod came out: load its sounds
-	rodReady() {
-
-		for ( const n of FISHING ) this._want( n );
-
-	}
-
-	// the cast: the rod whooshing through the air (power 0..1)
-	whoosh( power = 1 ) {
-
-		const p = clamp( num( power, 1 ), 0, 1 );
-		this._shot( 'rod_swish', 'rod', this.rod, MIX.rodSwish - ( 1 - p ) * 9, 0.9 + p * 0.2 + Math.random() * 0.06 );
-
-	}
-
-	// the bail wire: flipped open for the cast, snapped shut when reeling starts
-	bail( open ) {
-
-		this._shot( 'bail_click', 'rod', this.rod, MIX.bail + ( open ? 0 : 2 ), open ? 1.08 + Math.random() * 0.06 : 0.92 + Math.random() * 0.06 );
-
-	}
-
-	// line paying out off the spool as the bobber flies (power 0..1: farther casts run longer)
-	lineOut( power = 1 ) {
-
-		const p = clamp( num( power, 1 ), 0, 1 );
-		this._shot( 'line_out', 'rod', this.rod, MIX.lineOut - ( 1 - p ) * 6, 1.25 - p * 0.35 );
-
-	}
-
-	// the bobber landing on the water at p ({ x, y, z })
-	plop( p ) {
-
-		if ( ! p ) return;
-		this._shotAt( 'plop', 'fish', p.x, p.y, p.z, MIX.plop, 0.95 + Math.random() * 0.15, 0, 4, 1 );
-
-	}
-
-	// a hooked fish thrashing at p (strength 0..1)
-	fishSplash( p, strength = 0.5 ) {
-
-		if ( ! p ) return;
-		const s = clamp( num( strength, 0.5 ), 0, 1 );
-		this._shotAt( 'fish_splash', 'fish', p.x, p.y, p.z, MIX.fishSplash - ( 1 - s ) * 10, 0.9 + Math.random() * 0.2 + ( 1 - s ) * 0.15, 0, 6, 1 );
-
-	}
-
-	// the landed fish flapping on the line in front of you
-	fishFlop() {
-
-		this._shot( 'fish_flop', 'rod', this.near, MIX.fishFlop, 0.9 + Math.random() * 0.2 );
-
-	}
-
-	lineSnap() {
-
-		this._shot( 'line_snap', 'rod', this.rod, MIX.lineSnap, 0.95 + Math.random() * 0.1 );
-
-	}
-
-	// paid at the fish stand
-	coin() {
-
-		this._shot( 'coins', 'coin', this.near, MIX.coins, 0.97 + Math.random() * 0.06 );
-
-	}
-
-	// continuous reel sounds, every frame: crankRate (crank turns / s: the gear ticking follows it),
-	// dragSpeed (m/s of line a fish takes against the drag), tension (0..1+, the line creaks near 1)
-	rodLoop( crankRate, dragSpeed, tension ) {
-
-		const r = this._rod || ( this._rod = { crank: 0, drag: 0, tension: 0 } );
-		r.crank = clamp( num( crankRate, 0 ), 0, 3 );
-		r.drag = clamp( num( dragSpeed, 0 ), 0, 5 );
-		r.tension = clamp( num( tension, 0 ), 0, 2 );
-
-	}
-
-	_reel( now ) {
-
-		const r = this._rod;
-		if ( ! r ) return;
-		// the recorded crank ticks ~16 times a second: about 1.4 crank turns a second
-		const wind = smooth( 0.05, 0.35, r.crank );
-		if ( wind > 0 || this._beds.has( 'reel_wind' ) ) this._bed( 'reel_wind', dB( MIX.reelWind ) * wind * ( 0.8 + 0.2 * Math.min( 1, r.crank ) ) / dB( BANK.reel_wind.lufs ), now, 0.08, clamp( r.crank / 1.4, 0.45, 1.3 ) );
-		const drag = smooth( 0.05, 0.7, r.drag );
-		if ( drag > 0 || this._beds.has( 'reel_drag' ) ) this._bed( 'reel_drag', dB( MIX.reelDrag ) * drag / dB( BANK.reel_drag.lufs ), now, 0.06, clamp( 0.7 + r.drag * 0.25, 0.7, 1.25 ) );
-		const strain = smooth( 0.7, 1.0, r.tension );
-		if ( strain > 0 || this._beds.has( 'line_strain' ) ) this._bed( 'line_strain', dB( MIX.lineStrain ) * strain / dB( BANK.line_strain.lufs ), now, 0.1, 0.9 + 0.2 * strain );
 
 	}
 
@@ -529,17 +419,6 @@ export class SoundScape {
 		this.pierPan = panner( this.above, 3, 1.3 );
 		this.windLP = lowpass( 1400, 0.5, this.above );
 
-		// the rod and reel: held in front of you, a little to the right (the reel hangs lower right)
-		this.rodPan = c.createStereoPanner ? c.createStereoPanner() : null;
-		if ( this.rodPan ) {
-
-			this.rodPan.pan.value = 0.25;
-			this.rodPan.connect( this.above );
-
-		}
-
-		this.rod = gain( 1, this.rodPan || this.above );
-
 		// whale song: positional at the whale, its own path (open underwater, faint and dull from above)
 		this.songOut = gain( dB( - 20 ), this.master );
 		this.songLP = lowpass( 420, 0.6, this.songOut );
@@ -549,7 +428,6 @@ export class SoundScape {
 			surf_far: this.surfFar, wind: this.windLP, palms: this.above, crickets: this.above, pier_lap: this.pierPan,
 			under_reef: this.under, birds_dawn: this.above, whale_song: this.songPan,
 			boat_engine: this.engineLP, boat_rush: this.boatSum, boat_lap: this.boatSum,
-			reel_wind: this.rod, reel_drag: this.rod, line_strain: this.rod,
 		};
 
 	}
@@ -616,7 +494,7 @@ export class SoundScape {
 			src.start( now + 0.02, Math.random() * buf.duration );
 			bed = { src, gain: gn, trim: buf.numberOfChannels === 1 ? MONO : 1 };
 			this._beds.set( name, bed );
-			if ( this._dest[ name ] !== this.rod ) tau = Math.max( tau, 0.8 ); // fade in on first start (the reel follows the crank at once)
+			tau = Math.max( tau, 0.8 ); // fade in on first start
 
 		}
 

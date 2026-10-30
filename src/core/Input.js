@@ -12,6 +12,10 @@ export class Input {
 		this.rightDown = false;
 		this.locked = false;
 		this.enabled = true;
+		// analog movement from the touch stick: x right, y forward (length <= 1)
+		this.stick = { x: 0, y: 0 };
+		this.lookScale = 1; // look sensitivity (settings panel)
+		this._move = { x: 0, y: 0 };
 
 		window.addEventListener( 'keydown', ( e ) => {
 
@@ -81,9 +85,32 @@ export class Input {
 
 	}
 
+	// movement intent: WASD plus the touch stick, x right / y forward, clamped to length 1
+	move() {
+
+		const m = this._move;
+		m.x = 0; m.y = 0;
+		if ( ! this.enabled ) return m;
+		if ( this.keys.has( 'KeyW' ) ) m.y += 1;
+		if ( this.keys.has( 'KeyS' ) ) m.y -= 1;
+		if ( this.keys.has( 'KeyD' ) ) m.x += 1;
+		if ( this.keys.has( 'KeyA' ) ) m.x -= 1;
+		m.x += this.stick.x;
+		m.y += this.stick.y;
+		const l = Math.hypot( m.x, m.y );
+		if ( l > 1 ) {
+
+			m.x /= l; m.y /= l;
+
+		}
+
+		return m;
+
+	}
+
 	consumeLook() {
 
-		const l = { x: this.look.x, y: this.look.y };
+		const l = { x: this.look.x * this.lookScale, y: this.look.y * this.lookScale };
 		this.look.x = 0;
 		this.look.y = 0;
 		return l;
