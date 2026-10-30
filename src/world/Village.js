@@ -3,7 +3,7 @@ import { mulberry32 } from '../util/Noise.js';
 import { Builder, Batch } from './village/GeoBuilder.js';
 import { createVillageMaterials } from './village/VillageMaterials.js';
 import { VillageTextures } from './village/TextureBaker.js';
-import { buildHouse, buildBoathouse, buildMarketStall, buildShed } from './village/Buildings.js';
+import { buildHouse, buildBoathouse, buildShed } from './village/Buildings.js';
 import { buildBoardwalk } from './village/Boardwalk.js';
 import { buildPier, PIER } from './Pier.js';
 import { G } from '../engine/render/Frame.js';
@@ -120,7 +120,6 @@ export class Village {
 		this.sidePaths = []; // the plank side paths led to houses that are no longer built
 
 		this.footprints.push( buildBoathouse( ctx( this.harbor ), specs.boathouse ).footprint );
-		this.footprints.push( buildMarketStall( ctx( this.town ), specs.stall ).footprint );
 
 		this._beachProps( ctx( this.harbor ) );
 		this._villageProps( ctx( this.town ) );
@@ -174,9 +173,6 @@ export class Village {
 		}
 
 		const sheds = [
-			{ name: 'shed1', x: 21.5, z: - 119.5, yaw: 0.1, wall: lin( 0xb9c9b0 ), door: TRIMS.red },
-			{ name: 'shed2', x: 68.0, z: - 124.0, yaw: - 0.2, wall: lin( 0xd8b8a0 ), door: TRIMS.teal, galv: true },
-			{ name: 'shed3', x: 89.0, z: - 146.0, yaw: - 0.3, wall: lin( 0xa8c4d4 ), door: TRIMS.yellow },
 			{ name: 'shed4', x: 43.5, z: - 155.5, yaw: 0.0, wall: lin( 0xe8d8a8 ), door: TRIMS.blue },
 		];
 
@@ -184,7 +180,6 @@ export class Village {
 			houses: [ ...houses, ...huts ].filter( ( h ) => h.name === 'L' ), // only the two-storey house with the stone chimney stays
 			sheds,
 			boathouse: { x: 92.5, z: - 57.5, yaw: - 0.08, wall: lin( 0x8fb3a8 ), paint: 0.58 },
-			stall: { x: 40.2, z: - 113.2, yaw: 0.05 },
 		};
 
 	}
@@ -239,7 +234,7 @@ export class Village {
 	_plaza( ctx ) {
 
 		const { B, terrain, colliders, rand, lights } = ctx;
-		// benches, a lamp and some barrels around the market stall
+		// a lookout plaza: benches, a lamp and some barrels at the top of the boardwalk
 		const g = ( x, z ) => terrain.heightAt( x, z );
 		bench( B, 36.2, g( 36.2, - 108.2 ), - 108.2, 0.9, 1.6, rand.next(), lin( 0x4f8fa0 ) );
 		colliders.addBox( new Vector3( 36.2, g( 36.2, - 108.2 ) + 0.45, - 108.2 ), new Vector3( 0.85, 0.45, 0.3 ), 0.9, { tag: 'bench' } );

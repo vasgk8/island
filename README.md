@@ -3,9 +3,7 @@
 A real-time tropical island and ocean: swim the reef, drive the boat out to deep water, and watch a humpback
 breach. It runs directly on WebGPU and WGSL with its own small rendering engine, no framework.
 
-**Play it:** https://dgreenheck.github.io/tidewater/
-
-![Fishing off the pier at golden hour](docs/screenshot.jpg)
+**Play it:** https://vasgk8.github.io/island/
 
 ![The beach in the late afternoon](docs/screenshot-beach.jpg)
 
@@ -36,7 +34,7 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 
 **World**
 - An island with a beach, hills, headlands and rocks.
-- A fishing village, a pier, and the vendors' stalls built from Poly Haven scans.
+- A small village (one two-storey house, sheds, a boathouse) and a pier, with scanned beach debris from Poly Haven.
 - Realistic vendor characters (Microsoft Rocketbox) with skinned animation.
 - A coral reef with fish.
 - Palms, bananas, monstera, elephant ear, heliconia, bird of paradise, broadleaf trees, shrubs and dune
@@ -117,11 +115,10 @@ Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.y
 | `src/player/` | Walking, swimming, the boat and the free camera |
 | `src/audio/` | The sample-based soundscape |
 | `src/ui/` | Settings panel, loading screen and HUD |
-| `tools/` | Scripts that fetch and convert the characters, stall props and fishing sounds |
-| `test/` | Headless engine smoke test and game-logic tests (`npm test`), and HUD / loader dev pages |
+| `test/` | Headless engine smoke test (`npm test`) and loader dev pages |
 
 ## Credits and license
 
 The code is released under the MIT license; see [LICENSE](LICENSE). Third-party assets (CC0 audio from
-Freesound, CC0 scans from Poly Haven, MIT characters from Microsoft Rocketbox, OFL / Apache fonts) and
+Freesound, CC0 scans from Poly Haven, OFL / Apache fonts) and
 technique references are listed in [CREDITS.md](CREDITS.md).

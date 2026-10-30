@@ -23,7 +23,7 @@ const beachZoneAt = ( x, z ) => Math.max(
 	// the long west beach where the main body was cut back: no cliffs, a smooth shelf into the sea
 	Math.max( smoothstep( - 40, - 110, x ), smoothstep( 130, 200, x ) ) * smoothstep( - 760, - 560, z ) * ( 1 - smoothstep( - 90, - 20, z ) ) );
 
-const WEST_CUT = - 300, EAST_CUT = 330;
+const WEST_CUT = - 300, EAST_CUT = 270;
 const RES = 2048; // 1 m texels over the 2048 m domain
 
 // volcanic plugs on the summit ridge: [x, z, radius, height above the envelope]

@@ -1,6 +1,6 @@
 import { icon, brandMark } from './icons.js';
 
-// Tidewater UI: settings panel (tabs → folders → controls), HUD, help,
+// VASGK ISLAND UI: settings panel (tabs → folders → controls), HUD, help,
 // photo mode, start overlay and loader. Plain DOM, no dependencies.
 // All styling lives in ui.css (class prefix `tw-`).
 
@@ -2582,7 +2582,7 @@ export class UI {
 		let saved = null;
 		try {
 
-			saved = localStorage.getItem( 'tidewater.ui.tab' );
+			saved = localStorage.getItem( 'vasgk.ui.tab' ) || localStorage.getItem( 'tidewater.ui.tab' ); // old key: saved before the rename
 
 		} catch { /* storage unavailable */ }
 
@@ -2638,7 +2638,7 @@ export class UI {
 
 			try {
 
-				localStorage.setItem( 'tidewater.ui.tab', tab.id );
+				localStorage.setItem( 'vasgk.ui.tab', tab.id );
 
 			} catch { /* storage unavailable */ }
 

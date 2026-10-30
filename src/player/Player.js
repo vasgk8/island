@@ -86,8 +86,6 @@ export class Player {
 		this.deckGrounded = true;
 		this._ashore = null; // cached step-ashore target
 		this._ashoreT = 0;
-		// set by the fishing game: while a line is out the helm / step ashore prompts give way
-		this.busy = false;
 
 	}
 
@@ -157,8 +155,7 @@ export class Player {
 		this.yaw -= look.x * 0.0022;
 		this.pitch = THREE.MathUtils.clamp( this.pitch - look.y * 0.0022, - 1.5, 1.5 );
 
-		// (not with a line out or a fish in hand: E belongs to the fishing then)
-		if ( this.nearBoat() && ! this.busy ) {
+		if ( this.nearBoat() ) {
 
 			this.prompt = { key: 'E', text: 'Board boat' };
 			if ( inp.hit( 'KeyE' ) ) {
@@ -668,7 +665,7 @@ export class Player {
 
 		// prompts: take the helm, or step ashore
 		const hx = HOUSE_HELM.x, hz = HOUSE_HELM.z;
-		const nearHelm = Math.hypot( p.x - hx, p.z - hz ) < HELM_REACH && ! this.busy;
+		const nearHelm = Math.hypot( p.x - hx, p.z - hz ) < HELM_REACH;
 		this._ashoreT -= dt;
 		if ( this._ashoreT <= 0 ) {
 
@@ -687,7 +684,7 @@ export class Player {
 
 			}
 
-		} else if ( ! this.busy ) {
+		} else {
 
 			// at the rail: step ashore where there is ground on that side, else jump into the sea
 			const ep = this._ashore && this._ashore.ep;
