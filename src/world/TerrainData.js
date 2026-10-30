@@ -21,9 +21,9 @@ const ellipseDist = ( x, z, cx, cz, rx, rz ) => {
 const beachZoneAt = ( x, z ) => Math.max(
 	( 1 - smoothstep( 120, 205, Math.abs( x - 10 ) ) ) * ( 1 - smoothstep( 40, 140, z + 40 ) ) * smoothstep( - 260, - 120, z ),
 	// the long west beach where the main body was cut back: no cliffs, a smooth shelf into the sea
-	smoothstep( - 40, - 110, x ) * smoothstep( - 760, - 560, z ) * ( 1 - smoothstep( - 90, - 20, z ) ) );
+	Math.max( smoothstep( - 40, - 110, x ), smoothstep( 130, 200, x ) ) * smoothstep( - 760, - 560, z ) * ( 1 - smoothstep( - 90, - 20, z ) ) );
 
-const WEST_CUT = - 300;
+const WEST_CUT = - 300, EAST_CUT = 330;
 const RES = 2048; // 1 m texels over the 2048 m domain
 
 // volcanic plugs on the summit ridge: [x, z, radius, height above the envelope]
@@ -128,10 +128,9 @@ export class TerrainData {
 
 	_coast( x, z, F, bz ) {
 
-		// the west end of the main body is cut back to open sea at x = WEST_CUT (soft edge)
-		const dBody = - smin( - ellipseDist( x, z, 0, - 442, 565, 400 ), x - WEST_CUT, 60 );
-		const dE = ellipseDist( x, z, 288, - 12, 108, 228 );
-		let d = smin( dBody, dE, 75 ); // no west headland: open sea and sand there
+		// both ends of the main body are cut back to open sea at x = WEST_CUT / EAST_CUT (soft edge)
+		const dBody = - smin( smin( - ellipseDist( x, z, 0, - 442, 565, 400 ), x - WEST_CUT, 60 ), EAST_CUT - x, 60 );
+		let d = dBody; // no headlands: open sea and sand either side of the bay
 		d += F.f170 * 34 * ( 1 - 0.9 * bz );
 		if ( bz < 1 ) d += this.noise.fbm( x / 38, z / 38, 3 ) * 7 * ( 1 - bz );
 		d += F.und * 5 * bz; // gentle beach undulation
@@ -147,8 +146,7 @@ export class TerrainData {
 		const d = this._coast( x, z, F, bz );
 
 		// rocky headlands and outer coast
-		const headland = 1 - smoothstep( 60, 150, Math.hypot( ( x - 288 ) * 0.9, ( z + 12 ) * 0.45 ) );
-		const rm = Math.max( headland, 1 - bz * 1.4 );
+		const rm = 1 - bz * 1.4;
 		let rock = 0;
 		if ( rm > 0.35 ) rock = smoothstep( 0.35, 0.75, clamp( rm * ( 0.55 + 0.45 * n2.fbm( x / 60, z / 60, 3 ) ), 0, 1 ) );
 
@@ -215,7 +213,7 @@ export class TerrainData {
 			const bay = 1 - smoothstep( 120, 230, Math.abs( x - 22 - ( z + 100 ) * 0.08 + n.noise( z / 120, 3.7 ) * 30 ) );
 			const open = bay * ( 1 - smoothstep( 70, 340, e + n.noise( x / 80, z / 80 ) * 30 ) );
 			// the massif fades out toward the west so the land runs down to the beach without a wall
-			const wf = smoothstep( - 230, 90, x ), E = F.E * wf, gx = F.gx * wf, gz = F.gz * wf;
+			const wf = smoothstep( - 230, 90, x ) * ( 1 - smoothstep( 60, 290, x ) ), E = F.E * wf, gx = F.gx * wf, gz = F.gz * wf;
 			if ( E > 0.01 && open < 1 ) {
 
 				let m = E;

@@ -8,8 +8,6 @@
 export const RIDGES = [
 	// main east-west divide with the summit north of the bay
 	[ [ - 480, - 360, 40 ], [ - 380, - 410, 110 ], [ - 250, - 460, 150 ], [ - 120, - 495, 178 ], [ - 35, - 510, 215 ], [ 50, - 495, 176 ], [ 150, - 470, 168 ], [ 270, - 430, 124 ], [ 400, - 360, 60 ], [ 470, - 320, 25 ] ],
-	// east headland spur
-	[ [ 150, - 470, 155 ], [ 240, - 340, 108 ], [ 284, - 190, 70 ], [ 294, - 50, 50, 125 ], [ 294, 80, 36, 105 ], [ 290, 190, 18, 70 ] ],
 	// central spur behind the village
 	[ [ - 35, - 505, 195 ], [ - 15, - 410, 138 ], [ 8, - 330, 80, 180 ], [ 22, - 275, 38, 110 ] ],
 	// minor spurs framing the valley
@@ -68,9 +66,7 @@ export function ridgeEnvelope( x, z ) {
 }
 
 // Sea stacks off the headland tips: [x, z, radius, height]
-export const SEA_STACKS = [
-	[ 298, 252, 10, 19 ], [ 262, 246, 6, 10 ], [ 328, 228, 7, 12 ], [ 322, 186, 5, 9 ], [ 280, 272, 4.5, 7 ],
-];
+export const SEA_STACKS = [];
 
 // Footpaths (x, z polylines) with half widths. Worn into the ground (darkened + slightly sunken).
 export const PATHS = [

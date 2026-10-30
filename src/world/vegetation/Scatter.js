@@ -417,6 +417,22 @@ export function scatterVegetation( site, seed = 99 ) {
 
 	} );
 
+	// the long east beach: the same, leaning toward the sea (east)
+	scatter( rand, 60, - 560, 330, - 60, 3.4, ( x, z ) => {
+
+		if ( site.villageDist( x, z ) < RULES.villageRadius ) return;
+		site.cover( x, z, c );
+		const grove = N.fbm( x / 48, z / 48, 3 ) + 0.4 * N2.fbm( x / 17, z / 17, 2 );
+		const band = smoothstep( 1.95, 2.6, c.h ) * ( 1 - smoothstep( 8, 11, c.h ) );
+		const p = 0.55 * smoothstep( - 0.35, 0.15, grove ) * band;
+		if ( rand() > p ) return;
+		if ( ! site.allowed( x, z, c, { minH: 2.0, maxBare: 0.2, clear: 3, big: true, maxSand: 1.01, maxPath: 0.5 } ) || c.ny < 0.9 ) return;
+		if ( ! occ.free( x, z, 1.95, 1 ) || ! occT.free( x, z, 1.5, 1 ) ) return;
+		occ.add( x, z, 1.95, KIND.PALM );
+		out.palms.push( beachPalm( x, z, c.h, 1 ) );
+
+	} );
+
 	// --- a few palms inside the village radius: between the houses and along the beach edge,
 	// clear of buildings, boardwalks and the pier path --------------------------------------
 	const vc = [];
