@@ -18,9 +18,12 @@ const ellipseDist = ( x, z, cx, cz, rx, rz ) => {
 };
 
 // central bay: the beach and its underwater profile stay smooth (the surf is tuned for it)
-const beachZoneAt = ( x, z ) => ( 1 - smoothstep( 120, 205, Math.abs( x - 10 ) ) ) * ( 1 - smoothstep( 40, 140, z + 40 ) ) * smoothstep( - 260, - 120, z );
+const beachZoneAt = ( x, z ) => Math.max(
+	( 1 - smoothstep( 120, 205, Math.abs( x - 10 ) ) ) * ( 1 - smoothstep( 40, 140, z + 40 ) ) * smoothstep( - 260, - 120, z ),
+	// the long west beach where the main body was cut back: no cliffs, a smooth shelf into the sea
+	smoothstep( - 40, - 110, x ) * smoothstep( - 760, - 560, z ) * ( 1 - smoothstep( - 90, - 20, z ) ) );
 
-const WEST_CUT = - 170;
+const WEST_CUT = - 300;
 const RES = 2048; // 1 m texels over the 2048 m domain
 
 // volcanic plugs on the summit ridge: [x, z, radius, height above the envelope]
@@ -211,15 +214,17 @@ export class TerrainData {
 			// (an elongated valley reaching north into the massif, like the bays of Moorea)
 			const bay = 1 - smoothstep( 120, 230, Math.abs( x - 22 - ( z + 100 ) * 0.08 + n.noise( z / 120, 3.7 ) * 30 ) );
 			const open = bay * ( 1 - smoothstep( 70, 340, e + n.noise( x / 80, z / 80 ) * 30 ) );
-			if ( F.E > 0.01 && open < 1 ) {
+			// the massif fades out toward the west so the land runs down to the beach without a wall
+			const wf = smoothstep( - 230, 90, x ), E = F.E * wf, gx = F.gx * wf, gz = F.gz * wf;
+			if ( E > 0.01 && open < 1 ) {
 
-				let m = F.E;
-				const slope = Math.sqrt( F.gx * F.gx + F.gz * F.gz );
+				let m = E;
+				const slope = Math.sqrt( gx * gx + gz * gz );
 				if ( slope > 0.005 ) {
 
 					// meandering: warp the lookup a little so the gullies do not run dead straight
 					const mx = x + n.noise( x / 45, z / 45 ) * 14, mz = z + n.noise( x / 45 + 9.1, z / 45 - 4.3 ) * 14;
-					carve = erosionNoise( mx, mz, F.gx, F.gz, 5, 160, Math.min( 30, 0.16 * F.E ) );
+					carve = erosionNoise( mx, mz, gx, gz, 5, 160, Math.min( 30, 0.16 * E ) );
 					m += carve;
 
 				}
