@@ -2713,3 +2713,25 @@ body {
 	margin: calc(6 * var(--tw-u)) calc(2 * var(--tw-u));
 	background: var(--tw-fill-2);
 }
+
+.tw-mode-range {
+	width: calc(110 * var(--tw-u));
+	margin: 0 calc(4 * var(--tw-u)) 0 calc(6 * var(--tw-u));
+	accent-color: var(--tw-aqua);
+	align-self: center;
+	cursor: pointer;
+}
+
+.tw-mode-clock {
+	align-self: center;
+	min-width: calc(40 * var(--tw-u));
+	padding-right: calc(8 * var(--tw-u));
+	font: 500 calc(12 * var(--tw-u)) var(--tw-mono);
+	color: var(--tw-ink-2);
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+	.tw-mode-range { width: calc(70 * var(--tw-u)); }
+	.tw-mode-clock { display: none; }
+}

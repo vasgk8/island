@@ -1895,6 +1895,7 @@ export class UI {
 		this.onPanelToggle = null; // ( open )
 		this.onHelpToggle = null; // ( open )
 		this.onTimeToggle = null; // () the Day / Night button was clicked
+		this.onTimeSet = null; // ( hours ) the time slider was dragged
 		this.onModeChange = null; // ( 'walk' | 'fly' ) a Walk / Fly button was clicked
 		// Opening the panel exits pointer lock so the cursor can reach it.
 		this.releasePointerOnPanel = true;
@@ -2131,7 +2132,11 @@ export class UI {
 		}
 		this.timeBtn = h( 'button', 'tw-mode-btn tw-mode-time', { type: 'button', text: 'Night', 'aria-label': 'Switch between day and night' } );
 		this.timeBtn.addEventListener( 'click', () => callHook( this.onTimeToggle ) );
-		mode.append( h( 'span', 'tw-mode-sep' ), this.timeBtn );
+		// time of day: a slider and the clock (drag to set; it follows the sun otherwise)
+		this.timeRange = h( 'input', 'tw-mode-range', { type: 'range', min: 0, max: 24, step: 0.05, value: 12, 'aria-label': 'Time of day' } );
+		this.timeClock = h( 'span', 'tw-mode-clock', { text: '12:00' } );
+		this.timeRange.addEventListener( 'input', () => callHook( this.onTimeSet, Number( this.timeRange.value ) ) );
+		mode.append( h( 'span', 'tw-mode-sep' ), this.timeBtn, this.timeRange, this.timeClock );
 		this.root.append( mode );
 		this.setMode( 'walk' );
 
@@ -3033,6 +3038,22 @@ export class UI {
 
 		const t = night ? 'Day' : 'Night';
 		if ( this.timeBtn.textContent !== t ) this.timeBtn.textContent = t;
+
+	}
+
+	// The slider and clock follow the time of day (hours) unless the slider is being dragged.
+	setTime( hours ) {
+
+		const t = ( ( hours % 24 ) + 24 ) % 24;
+		const hh = Math.floor( t ), mm = Math.floor( ( t - hh ) * 60 );
+		const clock = `${ String( hh ).padStart( 2, '0' ) }:${ String( mm ).padStart( 2, '0' ) }`;
+		if ( this.timeClock.textContent !== clock ) this.timeClock.textContent = clock;
+		if ( document.activeElement !== this.timeRange ) {
+
+			const v = t.toFixed( 2 );
+			if ( this.timeRange.value !== v ) this.timeRange.value = v;
+
+		}
 
 	}
 
