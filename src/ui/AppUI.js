@@ -259,6 +259,43 @@ export class AppUI {
 	}
 
 	// per-frame HUD
+	// a soft ring on screen over the thing the E prompt is about (App.interactTarget)
+	_markTarget( it ) {
+
+		if ( typeof document === 'undefined' ) return;
+		let el = this._targetEl;
+		if ( ! el ) {
+
+			el = this._targetEl = document.createElement( 'div' );
+			el.className = 'vi-target';
+			( this.ui.hud || this.ui.root ).append( el );
+
+		}
+
+		const cam = this.app.camera;
+		if ( ! it || this.app.freeCam ) {
+
+			if ( el.classList.contains( 'is-on' ) ) el.classList.remove( 'is-on' );
+			return;
+
+		}
+
+		const v = this._tv || ( this._tv = new THREE.Vector3() );
+		v.copy( it.pos ).applyMatrix4( cam.matrixWorldInverse );
+		const behind = v.z > - 0.1; // (camera space looks down -z; the projection may be reversed-depth)
+		v.applyMatrix4( cam.projectionMatrix );
+		if ( behind || Math.abs( v.x ) > 1.2 || Math.abs( v.y ) > 1.2 ) {
+
+			el.classList.remove( 'is-on' );
+			return;
+
+		}
+
+		el.classList.add( 'is-on' );
+		el.style.transform = `translate(${ ( v.x * 0.5 + 0.5 ) * window.innerWidth }px, ${ ( - v.y * 0.5 + 0.5 ) * window.innerHeight }px)`;
+
+	}
+
 	update( dt ) {
 
 		const app = this.app;
@@ -269,6 +306,7 @@ export class AppUI {
 		ui.setNight( app.isNight() );
 		ui.setTime( app.settings.timeOfDay );
 		if ( this.minimap ) this.minimap.update( dt );
+		this._markTarget( app.interactTarget );
 
 		const p = app.player;
 		if ( app.freeCam ) {

@@ -63,7 +63,7 @@ export function furnitureKit( { B, rand, colliders, lights, interact = null, fir
 			const f = faceTo ? w3( faceTo[ 0 ], 0, faceTo[ 1 ] ) : w3( lx, 0, lz + 1 );
 			const viewYaw = Math.atan2( - ( f.x - p.x ), - ( f.z - p.z ) );
 			const stand = w3( lx, 0, lz + 0.6 );
-			interact( { pos: new Vector3( p.x, p.y + 0.5, p.z ), radius: 1.2, text: 'Sit down', act: ( app ) => app.player.sit( { x: p.x, y: p.y + 0.06, z: p.z, yaw: viewYaw, stand } ) } );
+			interact( { pos: new Vector3( p.x, p.y + 0.5, p.z ), radius: 1.2, text: 'Sit down', sound: 'sit', act: ( app ) => app.player.sit( { x: p.x, y: p.y + 0.06, z: p.z, yaw: viewYaw, stand } ) } );
 
 		},
 

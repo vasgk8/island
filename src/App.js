@@ -234,6 +234,8 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.localLights = new LocalLights();
 		addVillageLights( this.localLights, this.village );
 		this.localLights.setRooms( this.village.interiors );
+		// door creaks and thuds
+		for ( const D of this.village.doors ) D.onToggle = ( opening ) => this.audio && this.audio.doorSound( D.hinge, opening );
 		addBoatLights( this.localLights, this.boat );
 		// rough, large or heavily overdrawn surfaces (ground, rocks, debris, foliage) take the local
 		// lights as Lambert only; the village, pier and boat get the full BRDF (glints on wet wood, metal)
@@ -537,6 +539,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 	updateInteractions() {
 
 		const p = this.player, list = this.village ? this.village.interactables : null;
+		this.interactTarget = null;
 		if ( ! list || ! list.length || p.mode !== 'walk' || p.seat || p._standCooldown > 0 || this._sleeping || p.prompt ) return;
 		const e = this.camera.matrixWorld.elements;
 		let fx = - e[ 8 ], fz = - e[ 10 ];
@@ -561,8 +564,14 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		}
 
 		if ( ! best ) return;
+		this.interactTarget = best; // (the HUD marks it)
 		p.prompt = { key: 'E', text: typeof best.text === 'function' ? best.text() : best.text };
-		if ( this.input.hit( 'KeyE' ) ) best.act( this );
+		if ( this.input.hit( 'KeyE' ) ) {
+
+			best.act( this );
+			if ( best.sound === 'sit' && this.audio ) this.audio.seatSound( best.pos );
+
+		}
 
 	}
 

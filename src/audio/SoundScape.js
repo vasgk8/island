@@ -1319,6 +1319,84 @@ export class SoundScape {
 	// ------------------------------------------------------------------ helpers
 
 	// smooth parameter ramp; skips negligible changes to keep the automation timeline short
+	// a door on its hinges at p ({ x, y, z }): a short wooden creak (stick-slip: a buzzy tone chopped
+	// at ~30 Hz, gliding), and a thud as it shuts
+	doorSound( p, opening ) {
+
+		if ( ! this.ctx || this.ctx.state !== 'running' || ! p ) return;
+		const c = this.ctx, now = c.currentTime + 0.02;
+		const out = this._oneShotOut( p, 1.2 );
+		const len = 0.55 + Math.random() * 0.2;
+		const osc = c.createOscillator();
+		osc.type = 'sawtooth';
+		const f0 = opening ? 170 + Math.random() * 40 : 240 + Math.random() * 40;
+		osc.frequency.setValueAtTime( f0, now );
+		osc.frequency.linearRampToValueAtTime( opening ? f0 * 1.45 : f0 * 0.7, now + len );
+		const bp = c.createBiquadFilter();
+		bp.type = 'bandpass';
+		bp.frequency.value = 1100;
+		bp.Q.value = 3;
+		const chop = c.createGain();
+		chop.gain.value = 0;
+		const lfo = c.createOscillator();
+		lfo.type = 'square';
+		lfo.frequency.value = 26 + Math.random() * 10;
+		const lfoG = c.createGain();
+		lfoG.gain.value = 0.5;
+		lfo.connect( lfoG ).connect( chop.gain );
+		const env = c.createGain();
+		env.gain.setValueAtTime( 0, now );
+		env.gain.linearRampToValueAtTime( 0.05, now + 0.06 );
+		env.gain.setValueAtTime( 0.05, now + len - 0.12 );
+		env.gain.linearRampToValueAtTime( 0, now + len );
+		osc.connect( bp ).connect( chop ).connect( env ).connect( out );
+		osc.start( now );
+		lfo.start( now );
+		osc.stop( now + len + 0.05 );
+		lfo.stop( now + len + 0.05 );
+		if ( ! opening ) this._thud( out, now + 0.68, 0.35 );
+
+	}
+
+	// sitting down on a stool or chair at p: a soft wooden thump
+	seatSound( p ) {
+
+		if ( ! this.ctx || this.ctx.state !== 'running' || ! p ) return;
+		this._thud( this._oneShotOut( p, 1 ), this.ctx.currentTime + 0.05, 0.22 );
+
+	}
+
+	_thud( dest, t, level ) {
+
+		const c = this.ctx;
+		const src = c.createBufferSource();
+		src.buffer = this._noise;
+		const lp = c.createBiquadFilter();
+		lp.type = 'lowpass';
+		lp.frequency.value = 260;
+		const g = c.createGain();
+		g.gain.setValueAtTime( 0, t );
+		g.gain.linearRampToValueAtTime( level, t + 0.004 );
+		g.gain.exponentialRampToValueAtTime( 0.001, t + 0.14 );
+		src.connect( lp ).connect( g ).connect( dest );
+		src.start( t, Math.random() );
+		src.stop( t + 0.2 );
+
+	}
+
+	// a positional one-shot output at p (dry, into the room echo too), cleaned up by the GC
+	_oneShotOut( p, ref ) {
+
+		const c = this.ctx;
+		const pan = this._panner( this.near, ref, 1.2 );
+		this._pos( pan, p.x, p.y, p.z );
+		const g = c.createGain();
+		g.connect( pan );
+		g.connect( this.room );
+		return g;
+
+	}
+
 	// the hearth: a looped low roar and crackles scheduled at random (about 9 a second), heard within
 	// ~25 m of the nearest fire; duller from outside the room
 	_fire( now, dt ) {

@@ -2804,3 +2804,32 @@ html.has-touch .tw-stats {
 .vi-fade.is-on {
 	opacity: 1;
 }
+
+/* the thing the E prompt is about (AppUI._markTarget) */
+.vi-target {
+	position: absolute;
+	left: -11px;
+	top: -11px;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 236, 200, 0.85);
+	box-shadow: 0 0 10px rgba(255, 210, 140, 0.55), inset 0 0 6px rgba(255, 210, 140, 0.35);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease;
+}
+
+.vi-target.is-on {
+	opacity: 1;
+	animation: vi-target-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes vi-target-pulse {
+	0%, 100% { scale: 1; }
+	50% { scale: 1.18; }
+}
+
+.tw-root.is-photo .vi-target {
+	display: none;
+}
