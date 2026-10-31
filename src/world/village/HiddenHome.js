@@ -182,12 +182,12 @@ export function buildHiddenHome( ctx ) {
 	// threshold
 	B.box( 'stone', 0, - 0.03, fz + 0.1, DW * 2 + 0.2, 0.12, T + 0.3, { grain: 0, tint: lin( 0xb0a898 ), data: stoneOut() } );
 
-	// windows: lit panes, wooden frames, sills and green shutters
+	// windows: open casements in wooden frames, sills and green shutters
 	const green = lin( 0x3f6e48 );
 	for ( const [ wx, whw ] of win ) {
 
 		const ww = whw * 2, wh = WY1 - WY0, wy = ( WY0 + WY1 ) / 2;
-		B.part( 'glass', quad01Part( ww - 0.04, wh - 0.04 ), wx, wy, fz + 0.06, { tint: lin( 0xe8d6b0 ), data: [ rand.next(), 0, 1, 0 ] } );
+		// (no pane: the windows stand open, so you can see out from inside)
 		const fr = { grain: 0, tint: lin( 0x6e5238 ), data: wd( 0.5 ) };
 		B.box( 'wood', wx, WY0 + 0.03, fz + 0.06, ww + 0.1, 0.06, 0.1, fr );
 		B.box( 'wood', wx, WY1 - 0.03, fz + 0.06, ww + 0.1, 0.06, 0.1, fr );
