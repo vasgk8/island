@@ -2765,3 +2765,18 @@ body {
 .vi-touch.is-photo .vi-photo {
 	opacity: 0.35;
 }
+
+/* sleeping: a fade to black over everything (App.sleep) */
+.vi-fade {
+	position: fixed;
+	inset: 0;
+	z-index: 200;
+	background: #000;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.9s ease;
+}
+
+.vi-fade.is-on {
+	opacity: 1;
+}

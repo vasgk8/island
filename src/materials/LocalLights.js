@@ -140,6 +140,7 @@ export class LocalLights {
 	add( src ) {
 
 		src.phase = src.phase ?? Math.random() * 100;
+		if ( src.indoor ) this._hasIndoor = true;
 		this.sources.push( src );
 		return src;
 
@@ -190,9 +191,11 @@ export class LocalLights {
 
 		}
 
-		// lamps: on from dusk (same ramp as the lantern glass), nearest first
+		// lamps: on from dusk (same ramp as the lantern glass), nearest first; indoor lamps (s.indoor)
+		// stay lit by day too, since daylight does not reach inside
 		const on = smooth( G.night.value, 0.15, 0.75 ) * this.strength;
-		if ( on > 0.002 && this.enabled ) {
+		const onIndoor = Math.max( on, this.strength );
+		if ( ( on > 0.002 || this._hasIndoor ) && this.enabled ) {
 
 			const cp = camera.position;
 			const list = this._list;
@@ -200,6 +203,7 @@ export class LocalLights {
 			for ( const s of this.sources ) {
 
 				if ( s.enabled === false ) continue;
+				if ( on <= 0.002 && ! s.indoor ) continue;
 				if ( s.update ) s.update();
 				s.d2 = s.position.distanceToSquared( cp );
 				list.push( s );
@@ -215,7 +219,7 @@ export class LocalLights {
 				const s = list[ i ];
 				const fade = Number.isFinite( dCut ) ? smooth( Math.sqrt( s.d2 ), dCut, dCut * 0.8 ) : 1;
 				const fl2 = s.flicker ? 1 + s.flicker * Math.sin( this.time * 9 + s.phase ) * Math.sin( this.time * 5.3 + s.phase * 0.37 ) : 1;
-				const k = s.intensity * on * fade * fl2 * ( s.scale ?? 1 );
+				const k = s.intensity * ( s.indoor ? onIndoor : on ) * fade * fl2 * ( s.scale ?? 1 );
 				if ( k <= 1e-4 ) continue;
 				const r = s.range;
 				pos[ n ].set( s.position.x, s.position.y, s.position.z, r * r );
@@ -284,7 +288,7 @@ export function addVillageLights( lights, village ) {
 	for ( const l of village.getLightSources() ) {
 
 		const kind = l.kind || 'lantern';
-		const src = { position: l.position, color: l.color, intensity: l.intensity * ( K[ kind ] ?? 1.2 ), range: R[ kind ] ?? 12, kind };
+		const src = { position: l.position, color: l.color, intensity: l.intensity * ( K[ kind ] ?? 1.2 ), range: l.range ?? R[ kind ] ?? 12, kind, indoor: !! l.indoor };
 		if ( kind === 'window' ) {
 
 			// outward normal: away from the nearest building centre

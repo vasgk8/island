@@ -6,6 +6,7 @@ const HOUSE_HELM = { x: HOUSE.helmX, z: HOUSE.seatZ };
 
 const EYE = 1.62;
 const SWIM_EYE = EYE * 0.1; // eyes above the body's float point while swimming
+const SEAT_EYE = 1.12; // eyes above the floor when seated
 const RADIUS = 0.3;
 const HEIGHT = 1.75;
 // water depth (mean level over the feet) where you start swimming / find your feet again
@@ -86,6 +87,52 @@ export class Player {
 		this.deckGrounded = true;
 		this._ashore = null; // cached step-ashore target
 		this._ashoreT = 0;
+		this.seat = null; // sitting on a stool / chair (sit(), stand())
+		this._standCooldown = 0;
+
+	}
+
+	// sit on a seat { x, y, z (seat floor point), yaw (view), stand (where to stand up) } (App: E)
+	sit( seat ) {
+
+		this.seat = seat;
+		this.yaw = seat.yaw;
+		this.pitch = - 0.12;
+		this.velocity.set( 0, 0, 0 );
+		this.position.set( seat.x, seat.y, seat.z );
+
+	}
+
+	stand() {
+
+		const s = this.seat;
+		this.seat = null;
+		this._standCooldown = 0.4; // the same E press must not sit straight back down
+		if ( s && s.stand ) this.position.set( s.stand.x, s.stand.y + 0.1, s.stand.z );
+		this.velocity.set( 0, 0, 0 );
+
+	}
+
+	// seated: look around; E, Space or a push on the stick / WASD stands up
+	updateSeated() {
+
+		const inp = this.input;
+		const s = this.seat;
+		this.position.set( s.x, s.y, s.z );
+		this.prompt = { key: 'E', text: 'Stand up' };
+		const mv = inp.move();
+		if ( inp.hit( 'KeyE' ) || inp.hit( 'Space' ) || Math.hypot( mv.x, mv.y ) > 0.5 ) {
+
+			this.stand();
+			return;
+
+		}
+
+		this.camera.position.set( s.x, s.y + SEAT_EYE, s.z );
+		this._camY = this.camera.position.y;
+		this.camOff = 0;
+		this.camOffV = 0;
+		this.camera.quaternion.setFromEuler( _e.set( this.pitch, this.yaw, 0 ) );
 
 	}
 
@@ -154,6 +201,14 @@ export class Player {
 		const look = inp.consumeLook();
 		this.yaw -= look.x * 0.0022;
 		this.pitch = THREE.MathUtils.clamp( this.pitch - look.y * 0.0022, - 1.5, 1.5 );
+		if ( this._standCooldown > 0 ) this._standCooldown -= dt;
+
+		if ( this.seat ) {
+
+			this.updateSeated();
+			return;
+
+		}
 
 		if ( this.nearBoat() ) {
 

@@ -71,6 +71,10 @@ export class Village {
 		this.footprints = [];
 		this.foundationChecks = [];
 		this.buildings = [];
+		// interiors: hinged doors (own meshes), things to use with E (App), rooms (indoor sound)
+		this.doors = [];
+		this.interactables = [];
+		this.interiors = [];
 		this.group = new Group();
 		this.group.name = 'Village';
 
@@ -88,7 +92,12 @@ export class Village {
 		const specs = this._layout( rand );
 		this._flattenPads( specs );
 
-		const ctx = ( B ) => ( { B, terrain, colliders, rand, lights: this.lights, inst: this.inst, checks: this.foundationChecks } );
+		const ctx = ( B ) => ( {
+			B, terrain, colliders, rand, lights: this.lights, inst: this.inst, checks: this.foundationChecks,
+			door: ( spec ) => this._addDoor( spec ),
+			interact: ( it ) => this.interactables.push( it ),
+			interior: ( room ) => this.interiors.push( room ),
+		} );
 
 		// the fish sign at the pier entrance is its own small mesh: it swings in the wind (update())
 		this.signB = new Builder();
@@ -127,13 +136,14 @@ export class Village {
 		this._places( ctx( this.harbor ) );
 		if ( HIDDEN_HOME.F !== undefined ) {
 
-			buildHiddenHome( ctx( this.town ) );
+			this.hiddenHome = buildHiddenHome( ctx( this.town ) );
 			this.footprints.push( { x: HIDDEN_HOME.x, z: HIDDEN_HOME.z, r: 5.2, kind: 'building' } );
 
 		}
 
 		this._assemble();
 		this._buildSign();
+		this._buildDoors();
 		this._buildLanterns();
 		scene.add( this.group );
 
@@ -758,6 +768,7 @@ export class Village {
 	update( dt = 1 / 60 ) {
 
 		this._updateLanterns( dt );
+		this._updateDoors( dt );
 
 		// all other animation (flags, nets, laundry, lantern flicker) runs on the GPU from G.time / G.windDir / G.night
 		const s = this._swing;
@@ -783,6 +794,70 @@ export class Village {
 		}
 
 		this.sign.rotation.set( s.a, s.b, 0 );
+
+	}
+
+	// A hinged door: geometry goes into spec.B (door-local: hinge at the origin, the leaf along +x,
+	// facing +z); the village turns it about the hinge (yaw + angle). spec.blocker (a collider) is
+	// solid while the door is shut.
+	_addDoor( spec ) {
+
+		const D = {
+			B: new Builder(), hinge: spec.hinge, yaw: spec.yaw, openAngle: spec.openAngle ?? 1.6,
+			blocker: spec.blocker || null, target: spec.open ? 1 : 0, t: spec.open ? 1 : 0, group: null,
+			toggle() {
+
+				this.target = this.target > 0.5 ? 0 : 1;
+
+			},
+		};
+		if ( D.blocker ) D.blocker.solid = D.t < 0.5;
+		this.doors.push( D );
+		return D;
+
+	}
+
+	_buildDoors() {
+
+		for ( const D of this.doors ) {
+
+			const g = new Group();
+			g.name = 'village_door';
+			g.position.copy( D.hinge );
+			for ( const key of [ 'wood', 'hard' ] ) {
+
+				const b = D.B.batches[ key ];
+				if ( ! b || b.vcount === 0 ) continue;
+				const mesh = new Mesh( b.build(), this.materials[ key ] );
+				mesh.name = 'village_door_' + key;
+				mesh.castShadow = true;
+				mesh.receiveShadow = true;
+				g.add( mesh );
+
+			}
+
+			D.B = null;
+			D.group = g;
+			g.rotation.y = D.yaw + D.openAngle * D.t;
+			this.group.add( g );
+
+		}
+
+	}
+
+	_updateDoors( dt ) {
+
+		for ( const D of this.doors ) {
+
+			if ( D.t === D.target || ! D.group ) continue;
+			const step = dt / 0.7;
+			D.t = D.target > D.t ? Math.min( D.target, D.t + step ) : Math.max( D.target, D.t - step );
+			const e = D.t * D.t * ( 3 - 2 * D.t );
+			D.group.rotation.y = D.yaw + D.openAngle * e;
+			// solid while (nearly) shut, so it never pushes you out of the doorway while swinging
+			if ( D.blocker ) D.blocker.solid = D.t < 0.15;
+
+		}
 
 	}
 

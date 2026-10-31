@@ -508,6 +508,70 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 	}
 
+	// Things to use with E (Village.interactables: doors, beds, seats): the nearest one in reach that
+	// you are roughly facing shows its prompt; E (or the touch E button) uses it.
+	updateInteractions() {
+
+		const p = this.player, list = this.village ? this.village.interactables : null;
+		if ( ! list || ! list.length || p.mode !== 'walk' || p.seat || p._standCooldown > 0 || this._sleeping || p.prompt ) return;
+		const e = this.camera.matrixWorld.elements;
+		let fx = - e[ 8 ], fz = - e[ 10 ];
+		const fl = Math.hypot( fx, fz ) || 1;
+		fx /= fl; fz /= fl;
+		let best = null, bestScore = Infinity;
+		for ( const it of list ) {
+
+			const dx = it.pos.x - p.position.x, dz = it.pos.z - p.position.z, dy = it.pos.y - ( p.position.y + 1 );
+			const d = Math.hypot( dx, dz );
+			if ( d > it.radius || Math.abs( dy ) > 1.6 ) continue;
+			const facing = d > 0.3 ? ( dx * fx + dz * fz ) / d : 1;
+			if ( facing < - 0.2 ) continue;
+			const score = d - facing * 0.8;
+			if ( score < bestScore ) {
+
+				bestScore = score;
+				best = it;
+
+			}
+
+		}
+
+		if ( ! best ) return;
+		p.prompt = { key: 'E', text: typeof best.text === 'function' ? best.text() : best.text };
+		if ( this.input.hit( 'KeyE' ) ) best.act( this );
+
+	}
+
+	// sleep until morning: fade to black, set the clock to 7:15, fade back in
+	sleep() {
+
+		if ( this._sleeping || typeof document === 'undefined' ) return;
+		this._sleeping = true;
+		let el = this._fadeEl;
+		if ( ! el ) {
+
+			el = this._fadeEl = document.createElement( 'div' );
+			el.className = 'vi-fade';
+			document.body.append( el );
+
+		}
+
+		requestAnimationFrame( () => el.classList.add( 'is-on' ) );
+		setTimeout( () => {
+
+			this.setTimeOfDay( 7.25 );
+			if ( this.ui ) this.ui.ui.toast( 'Good morning' );
+			el.classList.remove( 'is-on' );
+			setTimeout( () => {
+
+				this._sleeping = false;
+
+			}, 900 );
+
+		}, 1600 );
+
+	}
+
 	// the time slider: set the hour directly (stops a running Day / Night change)
 	setTimeOfDay( hours ) {
 
@@ -662,7 +726,12 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.boatSpray.update( dt );
 		this.wake.update( dt );
 		if ( this.freeCam ) this.fly.update( dt );
-		else this.player.update( dt );
+		else {
+
+			this.player.update( dt );
+			this.updateInteractions();
+
+		}
 		this.updateSun();
 
 		this.atmosphere.update( dt, this.camera.position.y );
