@@ -28,6 +28,15 @@ jobs:
       - run: npm run build
       - name: World checks (no GPU)
         run: npm run test:world
+      - name: Building snapshots (stand-in renders of each building, inside and out)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run snapshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: building-snapshots
+          path: snapshots
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
           name: site-preview
@@ -37,3 +46,4 @@ jobs:
         run: |
           echo "### Preview build ready" >> "$GITHUB_STEP_SUMMARY"
           echo "Download **site-preview** from the Artifacts section of this run, unzip it and run \`npx serve <folder>\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "**building-snapshots** has stand-in renders of each building (open index.html)." >> "$GITHUB_STEP_SUMMARY"
