@@ -26,6 +26,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: World checks (no GPU)
+        run: npm run test:world
       - uses: actions/upload-artifact@v4
         with:
           name: site-preview
