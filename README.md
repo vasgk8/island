@@ -37,9 +37,12 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 - A small village (one two-storey house, sheds, a boathouse) and a pier, with scanned beach debris from Poly Haven.
 - A hidden home dug into the mountain's west flank (sod roof, arched door, a furnished room with a fireplace);
   a faint trail leads down to it from the lookout.
-- A small timber cabin on a knoll just below the summit, up a winding trail from the lookout; the house above the
-  plaza and the two beach huts are furnished too. Doors open and close, you can sit at tables, sleep until morning,
-  and fires crackle in the hearths.
+- A small timber cabin on a knoll just below the summit, up a winding trail (timber steps and a rope rail on the
+  steep bits) from the lookout; the house above the plaza (a living room downstairs, a bedroom up the stairs) and the
+  two beach huts are furnished too, with windows you can see through. Doors open and close with a creak, you can sit
+  at tables, sleep until morning, fires crackle in the hearths and smoke rises from the chimneys; rooms are lit by
+  their lamps (dim daylight indoors) and sound like rooms.
+- A minimap and a full-screen map (Tab) with every place named; the boat moors at the pier or the east-beach jetty.
 - A coral reef with fish.
 - Palms, bananas, monstera, elephant ear, heliconia, bird of paradise, broadleaf trees, shrubs and dune
   grass, with impostors and dithered LOD fades.
@@ -69,7 +72,7 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 | Shift | Sprint / boat boost |
 | Space | Jump / swim up |
 | C | Crouch / dive |
-| E | Interact: board the boat, take or leave the helm, step ashore |
+| E | Interact: board the boat, take or leave the helm, step ashore; open and close doors, sit down, sleep until morning |
 | V | Boat camera at the helm (1st / 3rd person) |
 | Tab | Map of the island (or click / tap the minimap) |
 | F | Free camera |
