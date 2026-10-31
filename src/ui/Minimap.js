@@ -5,7 +5,7 @@ import { PLACES } from '../world/Places.js';
 // data into a 2D canvas (depth-tinted sea, reef and seagrass, sand, grass and forest by height, rock,
 // paths, building pads, the pier, hill shading and a coastline), shown in a round window that turns
 // with the view (forward is up, a small N on the rim). Markers: the player (centre arrow), the
-// house, the lookout, the beach huts, the jetty, the hidden home and the boat; markers beyond the
+// house, the lookout, the beach huts, the jetty, the hidden home, the mountain cabin and the boat; markers beyond the
 // rim sit on it with an arrow.
 //
 // Per frame it only writes a few CSS transforms. The bake runs in row chunks over the first frames.
@@ -38,6 +38,7 @@ const CSS = /* css */`
 .gm-mk.is-hut > i { background: #f2c48a; }
 .gm-mk.is-jetty > i { background: var(--tw-aqua); }
 .gm-mk.is-secret > i { background: #8fd18a; }
+.gm-mk.is-cabin > i { background: #d9a86a; }
 .gm-mk.is-boat > i { background: #f2efe6; }
 .gm-mk > b { position: absolute; left: 0; top: 0; width: 0; height: 0; border-left: calc(5 * var(--tw-u)) solid transparent; border-right: calc(5 * var(--tw-u)) solid transparent;
 	border-bottom: calc(7 * var(--tw-u)) solid rgba(255,255,255,0.9); margin: calc(-19 * var(--tw-u)) 0 0 calc(-5 * var(--tw-u)); transform-origin: calc(5 * var(--tw-u)) calc(19 * var(--tw-u)); display: none; }
@@ -62,6 +63,7 @@ const ICON = {
 	home: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3L12 3Z"/></svg>',
 	view: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M3 19 9 9l4 6 3-4 5 8H3Z"/></svg>',
 	hut: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 11h3v9h14v-9h3L12 3Zm-2 17v-5h4v5h-4Z"/></svg>',
+	cabin: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h14v-8h3l-4-3.6V5h-2.5v1.6L12 3Zm-2 17v-5h4v5h-4Z"/></svg>',
 	door: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 21V11a7 7 0 0 1 14 0v10H5Zm9.5-6.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>',
 	anchor: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M7 11h10M4 14c1 4 4 6 8 6s7-2 8-6"/></svg>',
 	boat: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v9H6l6-9Zm1 2 5 7h-5V5ZM3 14h18l-3 5H6l-3-5Z"/></svg>',
@@ -128,6 +130,7 @@ export class Minimap {
 			{ id: 'hutE', ...mk( 'hut', ICON.hut ), pos: at( PLACES.hutE ) },
 			{ id: 'jetty', ...mk( 'jetty', ICON.anchor ), pos: at( { x: ( PLACES.jetty.x0 + PLACES.jetty.x1 ) / 2, z: PLACES.jetty.z } ) },
 			{ id: 'secret', ...mk( 'secret', ICON.door ), pos: at( PLACES.hiddenHome ) },
+			{ id: 'cabin', ...mk( 'cabin', ICON.cabin ), pos: at( PLACES.cabin ) },
 			{ id: 'boat', ...mk( 'boat', ICON.boat ), pos: () => {
 
 				const b = app.boatCtl;

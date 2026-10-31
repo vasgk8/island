@@ -28,6 +28,17 @@ export function furnishRoom( ctx, room, layout ) {
 		kit.hangingLantern( - 0.4, 0.45, ceil );
 		kit.hangingLantern( 1.3, - hz + 1.3, ceil, 2.2 );
 
+	} else if ( layout === 'cabin' ) {
+
+		// the mountain cabin: a fire on the chimney wall (right), a bed, a table for two, books, a chest
+		kit.place( hx, 0, - Math.PI / 2, () => kit.fireplace( { w: 1.3, ceilY: ceil, breast: lin( 0xd9c7a8 ) } ) );
+		kit.place( - hx + 0.53, - hz + 1.0, 0, () => kit.bed( { w: 1.0, l: 1.9, blanket: lin( 0x8a3b2e ), throwTint: lin( 0x3f6e48 ) } ) );
+		kit.place( 0.0, - 0.4, 0, () => kit.rug( { w: 1.8, d: 1.4, colors: [ 0x6a4a7a, 0xd8b45a, 0x3f6e48 ] } ) );
+		kit.place( 0.0, - 1.1, 0, () => kit.table( { w: 0.8, d: 0.6, stools: 2 } ) );
+		kit.place( 1.45, - hz + 0.19, 0, () => kit.bookshelf( { len: 0.9, top: 1.6, rows: 3 } ) );
+		kit.place( - hx + 0.4, hz - 0.35, 0, () => kit.chest() );
+		kit.hangingLantern( 0.0, - 0.4, ceil, 2.6 );
+
 	} else {
 
 		// a beach hut: single bed, a small shelf, a table for two, a chest

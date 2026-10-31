@@ -74,7 +74,7 @@ check( 'the plaza and the bay beach are still land', h( 41.5, - 111 ) > 2 && h( 
 // ---------------------------------------------------------------- village interiors
 {
 
-	check( 'four rooms (hidden home, house, two beach huts)', village.interiors.length === 4, village.interiors.length );
+	check( 'five rooms (hidden home, house, mountain cabin, two beach huts)', village.interiors.length === 5, village.interiors.length );
 	for ( const r of village.interiors ) {
 
 		check( `room at ${ r.x.toFixed( 0 ) },${ r.z.toFixed( 0 ) }: floor above the ground`, r.floorY > h( r.x, r.z ) - 0.1, `${ r.floorY.toFixed( 2 ) } vs ${ h( r.x, r.z ).toFixed( 2 ) }` );
@@ -86,12 +86,18 @@ check( 'the plaza and the bay beach are still land', h( 41.5, - 111 ) > 2 && h( 
 	}
 
 	check( 'outside is not indoor', village.indoorAt( PLACES.house.x, 8, PLACES.house.z + 9 ) === 0 );
-	check( 'two fireplaces', village.fires.length === 2, village.fires.length );
-	check( 'two smoking chimneys', village.chimneys.length === 2, village.chimneys.length );
+	check( 'three fireplaces', village.fires.length === 3, village.fires.length );
+	check( 'three smoking chimneys', village.chimneys.length === 3, village.chimneys.length );
 	const texts = village.interactables.map( ( it ) => typeof it.text === 'function' ? it.text() : it.text );
-	check( 'a bed to sleep in in every room', texts.filter( ( s ) => s === 'Sleep until morning' ).length === 4 );
+	check( 'a bed to sleep in in every room', texts.filter( ( s ) => s === 'Sleep until morning' ).length === 5 );
 	check( 'seats to sit on', texts.filter( ( s ) => s === 'Sit down' ).length >= 8 );
-	check( 'a door to every room', village.doors.length === 4 && texts.filter( ( s ) => /door/.test( s ) ).length === 4 );
+	check( 'a door to every room', village.doors.length === 5 && texts.filter( ( s ) => /door/.test( s ) ).length === 5 );
+	{
+
+		const c = village.interiors.find( ( r ) => Math.hypot( r.x - PLACES.cabin.x, r.z - PLACES.cabin.z ) < 1 );
+		check( 'the mountain cabin stands near the top', c && c.floorY > 170, c && c.floorY.toFixed( 1 ) );
+
+	}
 
 	// a door blocks the doorway only while shut
 	const D = village.doors[ 0 ];

@@ -8,5 +8,6 @@ export const PLACES = {
 	hutW: { x: - 236, z: - 196, yaw: - Math.PI / 2 + 0.1 }, // beach hut on the long west beach
 	hutE: { x: 226, z: - 172, yaw: Math.PI / 2 - 0.12 }, // beach hut on the long east beach
 	jetty: { x0: 262, x1: 326, z: - 200 }, // off the east beach
+	cabin: { x: - 6, z: - 485, yaw: 0 }, // mountain cabin on the knoll below the summit, facing the bay
 	hiddenHome: HIDDEN_HOME, // dug into the west flank (village/HiddenHome.js)
 };

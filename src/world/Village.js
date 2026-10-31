@@ -123,7 +123,7 @@ export class Village {
 
 				furnishRoom( ctx( B ), res.interior, s.layout || 'house' );
 				// a house with a lit hearth inside smokes
-				if ( res.chimneyTop && ( s.layout || 'house' ) === 'house' ) this.chimneys.push( res.chimneyTop );
+				if ( res.chimneyTop && [ 'house', 'cabin' ].includes( s.layout || 'house' ) ) this.chimneys.push( res.chimneyTop );
 
 			}
 			this.buildings.push( { name: s.name, x: s.x, z: s.z, floorY: res.floorY, roofTop: res.roofTop, stilts: s.foundation === 'stilts', footprint: res.footprint } );
@@ -170,6 +170,8 @@ export class Village {
 		const houses = [
 			// the two-storey house with the stone chimney above the plaza (enterable)
 			{ name: 'L', interior: true, layout: 'house', foundation: 'stone', stoneStyle: 0, curtain: CURTAINS[ 3 ], ...PLACES.house, w: 7.4, d: 5.6, stories: 2, roof: 'hip', roofMat: 'metal', roofColor: R.red, wall: P.white, trim: T.white, accent: T.green, siding: 1, porch: { depth: 2.3, rail: 'balusters' }, paint: 0.78, antenna: true, chimney: 1, doorGlass: true },
+			// a small timber cabin near the top of the mountain, its porch looking south over the bay (enterable)
+			{ name: 'C1', interior: true, layout: 'cabin', foundation: 'stone', stoneStyle: 1, curtain: CURTAINS[ 1 ], ...PLACES.cabin, w: 4.6, d: 4.0, roof: 'gable', roofMat: 'metal', roofColor: R.green, rust: 0.35, wall: lin( 0x8a6a4a ), trim: T.cream, accent: T.red, siding: 2, porch: { depth: 1.5, rail: 'x' }, paint: 0.4, weather: 0.8, shutters: 'board', fewWindows: true, chimney: 1, porchBench: true },
 			// beach huts on the long west and east beaches (floor ~1.6 m above the sand on stilts, enterable)
 			{ name: 'W1', interior: true, layout: 'hut', harbor: true, ...PLACES.hutW, w: 4.4, d: 4.2, floorY: 4.4, foundation: 'stilts', roof: 'gableFront', roofMat: 'thatch', thatchAge: 0.4, wall: P.turquoise, trim: T.white, accent: T.yellow, siding: 2, paint: 0.55, weather: 0.75, porch: { depth: 1.8, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, buoys: 1, porchBench: true, curtain: CURTAINS[ 0 ] },
 			{ name: 'E1', interior: true, layout: 'hut', harbor: true, ...PLACES.hutE, w: 4.0, d: 4.0, floorY: 4.4, foundation: 'stilts', roof: 'gable', roofMat: 'metal', roofColor: R.red, rust: 0.4, wall: P.yellow, trim: T.white, accent: T.blue, siding: 2, paint: 0.6, weather: 0.7, porch: { depth: 1.6, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, porchBench: true, curtain: CURTAINS[ 1 ] },

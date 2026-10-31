@@ -78,6 +78,9 @@ export const PATHS = [
 	{ w: 0.7, pts: [ [ 45.8, - 128 ], [ 41, - 134 ], [ 35.5, - 140 ], [ 31, - 143.5 ] ] },
 	// a faint trail from the lookout down the west flank to the hidden home (village/HiddenHome.js)
 	{ w: 0.45, pts: [ [ 2, - 324 ], [ - 12, - 333 ], [ - 22, - 345 ], [ - 35, - 352 ], [ - 46, - 363 ], [ - 58, - 371 ], [ - 66, - 377 ], [ - 72.5, - 379.6 ] ] },
+	// the mountain trail: from the lookout up the south face and round the west side of the knoll to
+	// the cabin below the summit (Places.cabin)
+	{ w: 0.5, pts: [ [ 6, - 326 ], [ 16, - 346 ], [ 4, - 366 ], [ 16, - 388 ], [ 12, - 410 ], [ 14, - 430 ], [ - 2, - 450 ], [ - 22, - 458 ], [ - 32, - 468 ], [ - 28, - 480 ], [ - 18, - 488 ], [ - 9, - 486 ] ] },
 	// east: boathouse up to the boardwalk
 	{ w: 0.9, pts: [ [ 88, - 62 ], [ 80, - 72 ], [ 70, - 80 ], [ 60, - 86 ], [ 54.5, - 90 ] ] },
 	// west: along the back of the beach to the western grove
