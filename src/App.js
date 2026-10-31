@@ -56,6 +56,7 @@ import { PostFX } from './post/PostFX.js';
 import { AirHaze } from './post/AirHaze.js';
 import { FlyCamera } from './player/FlyCamera.js';
 import { TouchControls, touchWanted } from './ui/TouchControls.js';
+import { loadPrefs, savePrefs, prefNumber, isPhoneLike } from './core/Prefs.js';
 import { Player } from './player/Player.js';
 import { BoatController } from './player/BoatController.js';
 import { BoatSpray } from './player/BoatSpray.js';
@@ -331,8 +332,20 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		} );
 		this.post = new PostFX( renderer, { sceneRenderer: this.sceneRenderer, camera, underwater: this.underwater, clouds: this.clouds, sunDir: this.atmosphere.sunDir, haze: this.haze } );
 		G.exposure.value = this.settings.exposure;
+		// remembered settings (core/Prefs.js); phones start at a lower internal resolution
+		const prefs = this.prefs = loadPrefs();
+		const tod = prefNumber( prefs.timeOfDay, 0, 24 ), speed = prefNumber( prefs.timeSpeed, 0, 2 );
+		if ( tod !== undefined ) this.settings.timeOfDay = tod;
+		if ( speed !== undefined ) this.settings.timeSpeed = speed;
+		this.input.lookScale = prefNumber( prefs.lookScale, 0.3, 3 ) ?? this.input.lookScale;
+		const savedScale = prefNumber( prefs.renderScale, 0.5, 1 );
+		if ( savedScale !== undefined ) this.settings.renderScale = savedScale;
+		else if ( isPhoneLike() ) this.settings.renderScale = 0.6;
 		if ( qs.has( 'scale' ) ) this.settings.renderScale = Number( qs.get( 'scale' ) ) || 1;
 		this.setRenderScale( this.settings.renderScale );
+		const save = () => this.savePrefs();
+		window.addEventListener( 'pagehide', save );
+		document.addEventListener( 'visibilitychange', () => document.visibilityState === 'hidden' && save() );
 
 		// ---------------------------------------------------------------- audio
 		// recorded field recordings (public/audio, credits in public/audio/CREDITS.md); ?noAudio turns it off
@@ -370,6 +383,16 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 			await GPU.queue.onSubmittedWorkDone();
 
 		}
+
+		// back in fly mode if that is how you left
+		if ( this.prefs.fly === true && ! qs.has( 'fly' ) ) this.setFreeCam( true );
+
+	}
+
+	savePrefs() {
+
+		const s = this.settings;
+		savePrefs( { v: 1, timeOfDay: s.timeOfDay, timeSpeed: s.timeSpeed, lookScale: this.input.lookScale, fly: !! this.freeCam, renderScale: s.renderScale } );
 
 	}
 
@@ -821,6 +844,13 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 		this.updateAudio( dt );
 		if ( this.ui ) this.ui.update( dt );
+		this._prefsT = ( this._prefsT ?? 0 ) + dt;
+		if ( this._prefsT > 5 ) {
+
+			this._prefsT = 0;
+			this.savePrefs();
+
+		}
 		this.input.endFrame();
 
 	}

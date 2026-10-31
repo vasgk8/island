@@ -2120,25 +2120,25 @@ export class UI {
 		this.root.append( rail, panel );
 
 		// Walk / Fly switch, always on screen (click the mouse free with Esc first)
-		const mode = this.modeEl = h( 'div', 'tw-mode tw-glass tw-interactive', { role: 'group', 'aria-label': 'Movement mode' } );
-		this.modeBtns = {};
+		const mode = this.moveEl = h( 'div', 'tw-move tw-glass tw-interactive', { role: 'group', 'aria-label': 'Movement mode' } );
+		this.moveBtns = {};
 		for ( const [ id, label ] of [ [ 'walk', 'Walk' ], [ 'fly', 'Fly' ] ] ) {
 
-			const b = h( 'button', 'tw-mode-btn', { type: 'button', text: label, 'aria-pressed': 'false' } );
+			const b = h( 'button', 'tw-move-btn', { type: 'button', text: label, 'aria-pressed': 'false' } );
 			b.addEventListener( 'click', () => callHook( this.onModeChange, id ) );
-			this.modeBtns[ id ] = b;
+			this.moveBtns[ id ] = b;
 			mode.append( b );
 
 		}
-		this.timeBtn = h( 'button', 'tw-mode-btn tw-mode-time', { type: 'button', text: 'Night', 'aria-label': 'Switch between day and night' } );
+		this.timeBtn = h( 'button', 'tw-move-btn tw-mode-time', { type: 'button', text: 'Night', 'aria-label': 'Switch between day and night' } );
 		this.timeBtn.addEventListener( 'click', () => callHook( this.onTimeToggle ) );
 		// time of day: a slider and the clock (drag to set; it follows the sun otherwise)
-		this.timeRange = h( 'input', 'tw-mode-range', { type: 'range', min: 0, max: 24, step: 0.05, value: 12, 'aria-label': 'Time of day' } );
-		this.timeClock = h( 'span', 'tw-mode-clock', { text: '12:00' } );
+		this.timeRange = h( 'input', 'tw-move-range', { type: 'range', min: 0, max: 24, step: 0.05, value: 12, 'aria-label': 'Time of day' } );
+		this.timeClock = h( 'span', 'tw-move-clock', { text: '12:00' } );
 		this.timeRange.addEventListener( 'input', () => callHook( this.onTimeSet, Number( this.timeRange.value ) ) );
-		mode.append( h( 'span', 'tw-mode-sep' ), this.timeBtn, this.timeRange, this.timeClock );
+		mode.append( h( 'span', 'tw-move-sep' ), this.timeBtn, this.timeRange, this.timeClock );
 		this.root.append( mode );
-		this.setMode( 'walk' );
+		this.setMoveMode( 'walk' );
 
 	}
 
@@ -2221,7 +2221,7 @@ export class UI {
 	_bindGlobal() {
 
 		const signal = this._ac.signal;
-		for ( const el of [ this.panel, this.rail, this.modeEl, this.helpEl, this.startEl ] ) this._isolate( el );
+		for ( const el of [ this.panel, this.rail, this.moveEl, this.helpEl, this.startEl ] ) this._isolate( el );
 
 		const interact = ( e ) => {
 
@@ -2232,10 +2232,10 @@ export class UI {
 
 		this.panel.addEventListener( 'pointerdown', interact );
 		this.rail.addEventListener( 'pointerdown', interact );
-		this.modeEl.addEventListener( 'pointerdown', interact );
+		this.moveEl.addEventListener( 'pointerdown', interact );
 
 		// Mouse-activated buttons give focus back so Space/Enter reach the game again.
-		for ( const el of [ this.panel, this.rail, this.modeEl, this.helpEl ] ) {
+		for ( const el of [ this.panel, this.rail, this.moveEl, this.helpEl ] ) {
 
 			el.addEventListener( 'click', ( e ) => {
 
@@ -3057,13 +3057,15 @@ export class UI {
 
 	}
 
-	// Highlights the active Walk / Fly button.
-	setMode( id ) {
+	// Highlights the active Walk / Fly button (only touches the DOM when it changes).
+	setMoveMode( id ) {
 
-		for ( const k in this.modeBtns ) {
+		if ( this._moveMode === id ) return;
+		this._moveMode = id;
+		for ( const k in this.moveBtns ) {
 
-			this.modeBtns[ k ].classList.toggle( 'is-active', k === id );
-			this.modeBtns[ k ].setAttribute( 'aria-pressed', String( k === id ) );
+			this.moveBtns[ k ].classList.toggle( 'is-active', k === id );
+			this.moveBtns[ k ].setAttribute( 'aria-pressed', String( k === id ) );
 
 		}
 

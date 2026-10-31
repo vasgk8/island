@@ -265,7 +265,7 @@ export class AppUI {
 		const ui = this.ui;
 		ui.setStats( { fps: app.fps, frameMs: dt * 1000 } );
 		this.s.renderScale = app.post.scale;
-		ui.setMode( app.freeCam ? 'fly' : 'walk' );
+		ui.setMoveMode( app.freeCam ? 'fly' : 'walk' );
 		ui.setNight( app.isNight() );
 		ui.setTime( app.settings.timeOfDay );
 		if ( this.minimap ) this.minimap.update( dt );

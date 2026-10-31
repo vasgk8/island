@@ -2539,8 +2539,8 @@ body {
 
 .tw-root.is-photo .tw-panel,
 .tw-root.is-photo .tw-rail,
-.tw-root.is-photo .tw-mode,
-.tw-root.is-starting .tw-mode,
+.tw-root.is-photo .tw-move,
+.tw-root.is-starting .tw-move,
 .tw-root.is-photo .tw-help,
 .tw-root.is-photo .tw-menu,
 .tw-root.is-photo .tw-tip {
@@ -2612,7 +2612,7 @@ body {
 }
 
 /* Walk / Fly switch */
-.tw-mode {
+.tw-move {
 	position: absolute;
 	top: var(--tw-3);
 	left: 50%;
@@ -2623,7 +2623,7 @@ body {
 	transform: translateX(-50%);
 }
 
-.tw-mode-btn {
+.tw-move-btn {
 	min-width: calc(64 * var(--tw-u));
 	height: calc(30 * var(--tw-u));
 	padding: 0 calc(14 * var(--tw-u));
@@ -2634,12 +2634,12 @@ body {
 	transition: color var(--tw-fast), background var(--tw-fast);
 }
 
-.tw-mode-btn:hover {
+.tw-move-btn:hover {
 	color: var(--tw-ink);
 	background: var(--tw-fill-2);
 }
 
-.tw-mode-btn.is-active {
+.tw-move-btn.is-active {
 	color: var(--tw-aqua);
 	background: var(--tw-fill-2);
 }
@@ -2708,13 +2708,13 @@ body {
 	background: rgba(255, 255, 255, 0.4);
 }
 
-.tw-mode-sep {
+.tw-move-sep {
 	width: 1px;
 	margin: calc(6 * var(--tw-u)) calc(2 * var(--tw-u));
 	background: var(--tw-fill-2);
 }
 
-.tw-mode-range {
+.tw-move-range {
 	width: calc(110 * var(--tw-u));
 	margin: 0 calc(4 * var(--tw-u)) 0 calc(6 * var(--tw-u));
 	accent-color: var(--tw-aqua);
@@ -2722,7 +2722,7 @@ body {
 	cursor: pointer;
 }
 
-.tw-mode-clock {
+.tw-move-clock {
 	align-self: center;
 	min-width: calc(40 * var(--tw-u));
 	padding-right: calc(8 * var(--tw-u));
@@ -2731,9 +2731,33 @@ body {
 	font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 560px) {
-	.tw-mode-range { width: calc(70 * var(--tw-u)); }
-	.tw-mode-clock { display: none; }
+@media (max-width: 760px) {
+	.tw-move-range { width: calc(70 * var(--tw-u)); }
+	.tw-move-clock { display: none; }
+}
+
+/* phones: no frame-time panel on touch screens; narrow (portrait) screens keep the top row clear —
+   the top bar shrinks to Walk / Fly / Night and the brand block steps aside (the minimap takes the
+   top-left corner, see Minimap.js) */
+html.has-touch .tw-stats {
+	display: none;
+}
+
+/* landscape phones (short screens): the same clear top row, and the settings rail lifted above the
+   touch buttons */
+@media (max-height: 500px) {
+	.tw-tl { display: none; }
+	.tw-rail { top: calc(50% - 44px); }
+}
+
+@media (max-width: 640px) {
+	.tw-tl { display: none; }
+	.tw-move-range { display: none; }
+	.tw-move-sep { margin-left: 0; margin-right: 0; }
+	.tw-move-btn {
+		min-width: calc(46 * var(--tw-u));
+		padding: 0 calc(8 * var(--tw-u));
+	}
 }
 
 .vi-photo {

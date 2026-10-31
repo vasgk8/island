@@ -55,6 +55,7 @@ const CSS = /* css */`
 @media (max-height: 860px) { .gm-map { right: calc(var(--tw-edge) + 58 * var(--tw-u)); } }
 @media (max-width: 640px) { .gm-map { width: calc(128 * var(--tw-u)); height: calc(128 * var(--tw-u)); } }
 html.has-touch .gm-map { bottom: auto; top: calc(var(--tw-edge) + 56 * var(--tw-u)); }
+@media (max-width: 640px), (max-height: 500px) { html.has-touch .gm-map { top: var(--tw-edge); left: var(--tw-edge); right: auto; width: calc(104 * var(--tw-u)); height: calc(104 * var(--tw-u)); } }
 `;
 
 const ICON = {
