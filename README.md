@@ -33,14 +33,13 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 - God rays, and a lens flare with occlusion.
 
 **World**
-- An island with a beach, hills, headlands and rocks.
+- An island with a central bay beach, two long side beaches with palm groves, a forested mountain and rocks.
 - A small village (one two-storey house, sheds, a boathouse) and a pier, with scanned beach debris from Poly Haven.
 - A hidden home dug into the mountain's west flank (sod roof, arched door, a furnished room with a fireplace);
   a faint trail leads down to it from the lookout.
 - A small timber cabin on a knoll just below the summit, up a winding trail from the lookout; the house above the
   plaza and the two beach huts are furnished too. Doors open and close, you can sit at tables, sleep until morning,
   and fires crackle in the hearths.
-- Realistic vendor characters (Microsoft Rocketbox) with skinned animation.
 - A coral reef with fish.
 - Palms, bananas, monstera, elephant ear, heliconia, bird of paradise, broadleaf trees, shrubs and dune
   grass, with impostors and dithered LOD fades.
