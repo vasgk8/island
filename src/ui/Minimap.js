@@ -1,5 +1,5 @@
 import { WORLD } from '../world/WorldLayout.js';
-import { HIDDEN_HOME } from '../world/village/HiddenHome.js';
+import { PLACES } from '../world/Places.js';
 
 // Minimap, lower right (upper right with touch controls): the island baked once from the terrain
 // data into a 2D canvas (depth-tinted sea, reef and seagrass, sand, grass and forest by height, rock,
@@ -118,15 +118,15 @@ export class Minimap {
 
 		};
 
-		// fixed places (Village.js: the house, the lookout, the beach huts, the jetty; HiddenHome.js)
-		const at = ( x, z ) => () => ( { x, z } );
+		// fixed places (world/Places.js)
+		const at = ( p ) => () => ( { x: p.x, z: p.z } );
 		this.markers = [
-			{ id: 'home', ...mk( 'home', ICON.home ), pos: at( 30.5, - 149 ) },
-			{ id: 'view', ...mk( 'view', ICON.view ), pos: at( 4, - 318 ) },
-			{ id: 'hutW', ...mk( 'hut', ICON.hut ), pos: at( - 236, - 196 ) },
-			{ id: 'hutE', ...mk( 'hut', ICON.hut ), pos: at( 226, - 172 ) },
-			{ id: 'jetty', ...mk( 'jetty', ICON.anchor ), pos: at( 300, - 200 ) },
-			{ id: 'secret', ...mk( 'secret', ICON.door ), pos: at( HIDDEN_HOME.x, HIDDEN_HOME.z ) },
+			{ id: 'home', ...mk( 'home', ICON.home ), pos: at( PLACES.house ) },
+			{ id: 'view', ...mk( 'view', ICON.view ), pos: at( PLACES.lookout ) },
+			{ id: 'hutW', ...mk( 'hut', ICON.hut ), pos: at( PLACES.hutW ) },
+			{ id: 'hutE', ...mk( 'hut', ICON.hut ), pos: at( PLACES.hutE ) },
+			{ id: 'jetty', ...mk( 'jetty', ICON.anchor ), pos: at( { x: ( PLACES.jetty.x0 + PLACES.jetty.x1 ) / 2, z: PLACES.jetty.z } ) },
+			{ id: 'secret', ...mk( 'secret', ICON.door ), pos: at( PLACES.hiddenHome ) },
 			{ id: 'boat', ...mk( 'boat', ICON.boat ), pos: () => {
 
 				const b = app.boatCtl;

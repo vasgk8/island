@@ -7,6 +7,7 @@ import { buildHouse, buildBoathouse, buildShed } from './village/Buildings.js';
 import { buildBoardwalk } from './village/Boardwalk.js';
 import { HIDDEN_HOME, carveHiddenHome, buildHiddenHome } from './village/HiddenHome.js';
 import { furnishRoom } from './village/Interiors.js';
+import { PLACES } from './Places.js';
 import { buildPier, PIER } from './Pier.js';
 import { G } from '../engine/render/Frame.js';
 import {
@@ -92,7 +93,7 @@ export class Village {
 		this.town = this.B;
 		this.inst = new InstancedProps( this.B );
 
-		const specs = this._layout( rand );
+		const specs = this._layout();
 		this._flattenPads( specs );
 
 		const ctx = ( B ) => ( {
@@ -163,49 +164,15 @@ export class Village {
 
 	// ------------------------------------------------------------------ layout
 
-	_layout( rand ) {
+	_layout() {
 
 		const P = PASTELS, T = TRIMS, R = ROOFS;
-		const curtain = () => rand.pick( CURTAINS );
 		const houses = [
-			// front row (just above the beach)
-			{ name: 'A', x: 13.5, z: - 106.5, yaw: 0.12, w: 6.2, d: 5.0, roof: 'gable', roofMat: 'metal', roofColor: R.red, wall: P.turquoise, trim: T.white, accent: T.navy, siding: 1, porch: { depth: 2.1, rail: 'balusters' }, paint: 0.62, stovepipe: true, buoys: - 1, porchPaint: lin( 0x8a9aa0 ) },
-			{ name: 'B', x: 26.5, z: - 112.0, yaw: - 0.08, w: 5.2, d: 4.5, roof: 'hip', roofMat: 'thatch', wall: P.coral, trim: T.cream, accent: T.teal, siding: 2, shutters: 'bahama', paint: 0.55, thatchAge: 0.35, annex: { w: 3.0, d: 2.0, wall: lin( 0xefe2c2 ) } },
-			{ name: 'C', x: 62.5, z: - 106.0, yaw: - 0.1, w: 7.0, d: 5.8, stories: 2, roof: 'gableFront', roofMat: 'metal', galv: true, rust: 0.55, wall: P.cream, trim: T.white, accent: T.blue, siding: 1, porch: { depth: 2.2, rail: 'x' }, paint: 0.7, antenna: true, tank: 1, doorGlass: true },
-			{ name: 'D', x: 79.0, z: - 110.5, yaw: - 0.18, w: 6.0, d: 5.0, roof: 'gable', roofMat: 'metal', roofColor: R.green, wall: P.sky, trim: T.white, accent: T.yellow, siding: 2, porch: { depth: 1.9, width: 4.4, offset: - 0.6, rail: 'balusters' }, doorX: - 0.6, paint: 0.66, gutter: true, woodpile: 1 },
-			{ name: 'E', x: 96.0, z: - 115.5, yaw: - 0.3, w: 5.4, d: 4.6, roof: 'hip', roofMat: 'metal', roofColor: R.teal, wall: P.yellow, trim: T.white, accent: T.green, siding: 1, shutters: 'louver', paint: 0.58, buoys: 1, annex: { w: 3.2, d: 2.0 } },
-			// middle row
-			{ name: 'F', x: - 3.0, z: - 125.0, yaw: 0.22, w: 5.6, d: 5.0, roof: 'gableFront', roofMat: 'thatch', wall: P.mint, trim: T.white, accent: T.red, siding: 2, porch: { depth: 1.9, rail: 'x' }, paint: 0.5, thatchAge: 0.55, shutters: 'board' },
-			{ name: 'G', x: 16.5, z: - 130.0, yaw: 0.1, w: 6.6, d: 5.6, stories: 2, roof: 'gable', roofMat: 'metal', roofColor: R.blue, wall: P.pink, trim: T.white, accent: T.teal, siding: 1, porch: { depth: 2.2, rail: 'balusters' }, paint: 0.72, chimney: - 1, doorGlass: true },
-			{ name: 'H', x: 57.5, z: - 128.5, yaw: - 0.05, w: 6.0, d: 5.2, roof: 'gableFront', roofMat: 'thatch', wall: P.turquoise, trim: T.cream, accent: T.yellow, siding: 2, porch: { depth: 2.0, rail: 'x' }, paint: 0.55, thatchAge: 0.3, shutters: 'board', woodpile: - 1, annex: { w: 3.4, d: 2.2, x: 0.6, wall: lin( 0x8cc2e0 ) } },
-			{ name: 'I', x: 75.5, z: - 132.5, yaw: - 0.2, w: 5.4, d: 4.6, roof: 'gable', roofMat: 'metal', roofColor: R.red, rust: 0.6, wall: P.cream, trim: T.red, accent: T.red, siding: 1, paint: 0.6, tank: - 1, stovepipe: true },
-			{ name: 'J', x: 96.5, z: - 135.0, yaw: - 0.32, w: 6.2, d: 5.0, roof: 'hip', roofMat: 'metal', roofColor: R.grey, galv: true, rust: 0.7, wall: P.sky, trim: T.white, accent: T.navy, siding: 2, porch: { depth: 1.9, rail: 'balusters' }, paint: 0.6, annex: { w: 3.6, d: 2.0, x: - 0.8 } },
-			// back row (plateau)
-			{ name: 'K', x: 3.5, z: - 151.0, yaw: 0.18, w: 6.0, d: 5.2, roof: 'gable', roofMat: 'metal', roofColor: R.green, wall: P.yellow, trim: T.white, accent: T.blue, siding: 1, porch: { depth: 2.0, rail: 'x' }, paint: 0.64, gutter: true },
-			{ name: 'L', interior: true, layout: 'house', x: 30.5, z: - 149.0, yaw: 0.04, w: 7.4, d: 5.6, stories: 2, roof: 'hip', roofMat: 'metal', roofColor: R.red, wall: P.white, trim: T.white, accent: T.green, siding: 1, porch: { depth: 2.3, rail: 'balusters' }, paint: 0.78, antenna: true, chimney: 1, doorGlass: true },
-			{ name: 'M', x: 55.0, z: - 152.5, yaw: - 0.06, w: 5.2, d: 4.8, roof: 'gableFront', roofMat: 'thatch', wall: P.coral, trim: T.white, accent: T.teal, siding: 1, paint: 0.52, thatchAge: 0.45, shutters: 'bahama', annex: { w: 3.0, d: 1.8 } },
-			{ name: 'N', x: 78.5, z: - 156.0, yaw: - 0.22, w: 6.0, d: 5.0, roof: 'gable', roofMat: 'metal', roofColor: R.teal, wall: P.lavender, trim: T.white, accent: T.navy, siding: 2, porch: { depth: 1.9, rail: 'balusters' }, paint: 0.62, tank: 1 },
-		];
-
-		// stilt fishing huts just above the beach, close to the pier foot (floor ~3 m)
-		const huts = [
-			{ name: 'S1', harbor: true, x: 67.8, z: - 64.6, yaw: 0.05, w: 4.0, d: 4.2, floorY: 3.0, foundation: 'stilts', roof: 'gableFront', roofMat: 'metal', roofColor: ROOFS.rust, rust: 0.8, wall: P.sea, trim: T.white, accent: T.red, siding: 2, paint: 0.52, weather: 0.85, porch: { depth: 1.6, rail: 'x' }, shutters: 'board', closedChance: 0.3, fewWindows: true, rimRaw: true, buoys: 1, porchBench: false, railNet: lin( 0x3f6f5f ) },
-			{ name: 'S2', harbor: true, x: 79.8, z: - 70.4, yaw: - 0.12, w: 4.4, d: 4.0, floorY: 3.05, foundation: 'stilts', roof: 'gableFront', roofMat: 'thatch', thatchAge: 0.6, wall: P.coral, trim: T.cream, accent: T.teal, siding: 2, paint: 0.48, weather: 0.9, porch: { depth: 1.6, rail: 'x' }, shutters: 'board', closedChance: 0.25, fewWindows: true, rimRaw: true, porchBench: false, railNet: lin( 0x9a4a38 ) },
-			{ name: 'S3', harbor: true, x: 37.2, z: - 72.4, yaw: 0.18, w: 4.0, d: 4.0, floorY: 3.15, foundation: 'stilts', roof: 'gable', roofMat: 'thatch', thatchAge: 0.5, wall: P.yellow, trim: T.white, accent: T.blue, siding: 2, paint: 0.5, weather: 0.85, porch: { depth: 1.6, rail: 'x' }, shutters: 'board', closedChance: 0.2, fewWindows: true, rimRaw: true, buoys: - 1, porchBench: false },
-		];
-
-		for ( const h of [ ...houses, ...huts ] ) {
-
-			h.curtain = h.curtain || curtain();
-			if ( h.foundation === undefined ) h.foundation = rand.chance( 0.5 ) ? 'stone' : 'posts';
-			if ( h.foundation === 'stone' ) h.stoneStyle = rand.chance( 0.6 ) ? 1 : 0;
-
-		}
-
-		// beach huts on the long west and east beaches (floor ~1.6 m above the sand on stilts)
-		const beachHuts = [
-			{ name: 'W1', interior: true, layout: 'hut', harbor: true, x: - 236, z: - 196, yaw: - Math.PI / 2 + 0.1, w: 4.4, d: 4.2, floorY: 4.4, foundation: 'stilts', roof: 'gableFront', roofMat: 'thatch', thatchAge: 0.4, wall: P.turquoise, trim: T.white, accent: T.yellow, siding: 2, paint: 0.55, weather: 0.75, porch: { depth: 1.8, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, buoys: 1, porchBench: true, curtain: CURTAINS[ 0 ] },
-			{ name: 'E1', interior: true, layout: 'hut', harbor: true, x: 226, z: - 172, yaw: Math.PI / 2 - 0.12, w: 4.0, d: 4.0, floorY: 4.4, foundation: 'stilts', roof: 'gable', roofMat: 'metal', roofColor: R.red, rust: 0.4, wall: P.yellow, trim: T.white, accent: T.blue, siding: 2, paint: 0.6, weather: 0.7, porch: { depth: 1.6, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, porchBench: true, curtain: CURTAINS[ 1 ] },
+			// the two-storey house with the stone chimney above the plaza (enterable)
+			{ name: 'L', interior: true, layout: 'house', foundation: 'stone', stoneStyle: 0, curtain: CURTAINS[ 3 ], ...PLACES.house, w: 7.4, d: 5.6, stories: 2, roof: 'hip', roofMat: 'metal', roofColor: R.red, wall: P.white, trim: T.white, accent: T.green, siding: 1, porch: { depth: 2.3, rail: 'balusters' }, paint: 0.78, antenna: true, chimney: 1, doorGlass: true },
+			// beach huts on the long west and east beaches (floor ~1.6 m above the sand on stilts, enterable)
+			{ name: 'W1', interior: true, layout: 'hut', harbor: true, ...PLACES.hutW, w: 4.4, d: 4.2, floorY: 4.4, foundation: 'stilts', roof: 'gableFront', roofMat: 'thatch', thatchAge: 0.4, wall: P.turquoise, trim: T.white, accent: T.yellow, siding: 2, paint: 0.55, weather: 0.75, porch: { depth: 1.8, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, buoys: 1, porchBench: true, curtain: CURTAINS[ 0 ] },
+			{ name: 'E1', interior: true, layout: 'hut', harbor: true, ...PLACES.hutE, w: 4.0, d: 4.0, floorY: 4.4, foundation: 'stilts', roof: 'gable', roofMat: 'metal', roofColor: R.red, rust: 0.4, wall: P.yellow, trim: T.white, accent: T.blue, siding: 2, paint: 0.6, weather: 0.7, porch: { depth: 1.6, rail: 'x' }, shutters: 'board', fewWindows: true, rimRaw: true, porchBench: true, curtain: CURTAINS[ 1 ] },
 		];
 
 		const sheds = [
@@ -213,9 +180,7 @@ export class Village {
 		];
 
 		return {
-			// only the two-storey house with the stone chimney stays from the old village, plus a hut on
-			// each of the long beaches either side of the bay
-			houses: [ ...[ ...houses, ...huts ].filter( ( h ) => h.name === 'L' ), ...beachHuts ],
+			houses,
 			sheds,
 			boathouse: { x: 92.5, z: - 57.5, yaw: - 0.08, wall: lin( 0x8fb3a8 ), paint: 0.58 },
 		};
@@ -483,7 +448,7 @@ export class Village {
 		// lookout: a timber platform at the end of the trail, looking south over the bay
 		{
 
-			const cx = 4, cz = - 318, ry = 0.15, W = 4.2, D = 3.2;
+			const { x: cx, z: cz, yaw: ry } = PLACES.lookout, W = 4.2, D = 3.2;
 			const cs = Math.cos( ry ), sn = Math.sin( ry );
 			const at = ( lx, lz ) => [ cx + lx * cs + lz * sn, cz - lx * sn + lz * cs ];
 			let top = - Infinity;
@@ -523,7 +488,7 @@ export class Village {
 		// jetty off the east beach: a plank deck on piles running out to ~3 m of water, a light at the end
 		{
 
-			const z = - 200, x0 = 262, x1 = 326, deck = 1.45, half = 1.0, step = 3.2;
+			const { z, x0, x1 } = PLACES.jetty, deck = 1.45, half = 1.0, step = 3.2;
 			for ( let x = x0; x < x1; x += step ) {
 
 				const xe = Math.min( x + step, x1 );
