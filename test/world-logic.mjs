@@ -18,6 +18,7 @@ const { Village } = await import( '../src/world/Village.js' );
 const { HIDDEN_HOME } = await import( '../src/world/village/HiddenHome.js' );
 const { PLACES } = await import( '../src/world/Places.js' );
 const { Input } = await import( '../src/core/Input.js' );
+const { updateDoors } = await import( '../src/world/village/Doors.js' );
 
 let failed = 0, passed = 0;
 const check = ( name, ok, detail = '' ) => {
@@ -103,10 +104,10 @@ check( 'the plaza and the bay beach are still land', h( 41.5, - 111 ) > 2 && h( 
 	const D = village.doors[ 0 ];
 	check( 'doors start open (not blocking)', D.t === 1 && D.blocker && D.blocker.solid === false );
 	D.toggle();
-	for ( let i = 0; i < 60; i ++ ) village._updateDoors( 1 / 30 );
+	for ( let i = 0; i < 60; i ++ ) updateDoors( village.doors, 1 / 30 );
 	check( 'a shut door blocks the doorway', D.t === 0 && D.blocker.solid === true );
 	D.toggle();
-	for ( let i = 0; i < 60; i ++ ) village._updateDoors( 1 / 30 );
+	for ( let i = 0; i < 60; i ++ ) updateDoors( village.doors, 1 / 30 );
 	check( 'an opened door clears it again', D.t === 1 && D.blocker.solid === false );
 
 	// every thing to use stands inside or by a room, at floor level

@@ -10,10 +10,11 @@ import { furnishRoom } from './village/Interiors.js';
 import { PLACES } from './Places.js';
 import { buildPier, PIER } from './Pier.js';
 import { G } from '../engine/render/Frame.js';
-import {
-	InstancedProps, Rand, lin, C, WOOD, rowboat, netRack, laundryLine, oar, buoy,
-	bench, ropeCoil, pathLight, lampPost, wreck,
-} from './Props.js';
+import { InstancedProps, Rand, lin } from './Props.js';
+import { PASTELS, TRIMS, ROOFS, CURTAINS } from './village/Palette.js';
+import { buildPlaza, buildBeachProps, buildVillageProps } from './village/VillageProps.js';
+import { buildLandmarks } from './village/Landmarks.js';
+import { makeDoor, buildDoorMeshes, updateDoors } from './village/Doors.js';
 
 // The settlement by the bay: timber pier with a T-head and the island's name sign, a boathouse,
 // a boardwalk up to a small lookout plaza, one two-storey house with its shed on the slope and
@@ -24,41 +25,6 @@ import {
 // share one vertex / index buffer; the wood mesh is the only shadow caster and covers all
 // opaque geometry in the shadow passes (see _assemble). Surface detail comes from GPU-baked
 // PBR texture sets (village/TextureBaker.js, 43 MB) sampled with metre-scale uvs.
-
-const PASTELS = {
-	turquoise: lin( 0x5dbcb0 ),
-	coral: lin( 0xec8b76 ),
-	cream: lin( 0xefe2c2 ),
-	sky: lin( 0x8cc2e0 ),
-	yellow: lin( 0xf0cf7c ),
-	mint: lin( 0xa9dcbf ),
-	pink: lin( 0xf2b3aa ),
-	white: lin( 0xf1ede2 ),
-	lavender: lin( 0xbdb3da ),
-	sea: lin( 0x6aa6b8 ),
-};
-
-const TRIMS = {
-	white: lin( 0xf3efe6 ),
-	cream: lin( 0xe9dfc6 ),
-	navy: lin( 0x2e4f73 ),
-	teal: lin( 0x2d7f7a ),
-	red: lin( 0xa8463a ),
-	green: lin( 0x4c7d4c ),
-	yellow: lin( 0xe0b545 ),
-	blue: lin( 0x3f79ae ),
-};
-
-const ROOFS = {
-	red: lin( 0xa64a35 ),
-	green: lin( 0x5f8a6a ),
-	blue: lin( 0x4f7898 ),
-	teal: lin( 0x3f8a86 ),
-	rust: lin( 0x8a5a40 ),
-	grey: lin( 0x8c9296 ),
-};
-
-const CURTAINS = [ lin( 0xe8d6b0 ), lin( 0xd98c7a ), lin( 0x9cc0d8 ), lin( 0xf0e8d8 ), lin( 0xc9d89a ) ];
 
 const _lanternEuler = new Euler();
 
@@ -98,7 +64,13 @@ export class Village {
 
 		const ctx = ( B ) => ( {
 			B, terrain, colliders, rand, lights: this.lights, inst: this.inst, checks: this.foundationChecks,
-			door: ( spec ) => this._addDoor( spec ),
+			door: ( spec ) => {
+
+				const D = makeDoor( spec );
+				this.doors.push( D );
+				return D;
+
+			},
 			interact: ( it ) => this.interactables.push( it ),
 			interior: ( room ) => this.interiors.push( room ),
 			fire: ( p ) => this.fires.push( p ),
@@ -113,7 +85,7 @@ export class Village {
 		this.path = buildBoardwalk( ctx( this.harbor ), [
 			[ foot.x, foot.z + 0.05 ], [ 54.6, - 72 ], [ 52.4, - 82 ], [ 48.4, - 92 ], [ 44.8, - 100.5 ], [ 42.6, - 107.2 ],
 		], { width: 1.8, startY: foot.y + 0.24, lightEvery: 70 } );
-		this._plaza( ctx( this.town ) );
+		buildPlaza( this, ctx( this.town ) );
 
 		for ( const s of specs.houses ) {
 
@@ -143,9 +115,9 @@ export class Village {
 
 		this.footprints.push( buildBoathouse( ctx( this.harbor ), specs.boathouse ).footprint );
 
-		this._beachProps( ctx( this.harbor ) );
-		this._villageProps( ctx( this.town ) );
-		this._places( ctx( this.harbor ) );
+		buildBeachProps( this, ctx( this.harbor ) );
+		buildVillageProps( this, ctx( this.town ) );
+		buildLandmarks( this, ctx( this.harbor ) );
 		if ( HIDDEN_HOME.F !== undefined ) {
 
 			this.hiddenHome = buildHiddenHome( ctx( this.town ) );
@@ -156,7 +128,7 @@ export class Village {
 
 		this._assemble();
 		this._buildSign();
-		this._buildDoors();
+		buildDoorMeshes( this.doors, this.materials, this.group );
 		this._buildLanterns();
 		scene.add( this.group );
 
@@ -234,286 +206,6 @@ export class Village {
 		if ( typeof t.carveRect === 'function' ) carveHiddenHome( t );
 
 		if ( typeof t.buildMinMax === 'function' ) t.buildMinMax();
-
-	}
-
-	// ------------------------------------------------------------------ plaza
-
-	_plaza( ctx ) {
-
-		const { B, terrain, colliders, rand, lights } = ctx;
-		// a lookout plaza: benches, a lamp and some barrels at the top of the boardwalk
-		const g = ( x, z ) => terrain.heightAt( x, z );
-		bench( B, 36.2, g( 36.2, - 108.2 ), - 108.2, 0.9, 1.6, rand.next(), lin( 0x4f8fa0 ) );
-		colliders.addBox( new Vector3( 36.2, g( 36.2, - 108.2 ) + 0.45, - 108.2 ), new Vector3( 0.85, 0.45, 0.3 ), 0.9, { tag: 'bench' } );
-		bench( B, 45.8, g( 45.8, - 108.6 ), - 108.6, - 0.85, 1.6, rand.next(), lin( 0xb05a45 ) );
-		colliders.addBox( new Vector3( 45.8, g( 45.8, - 108.6 ) + 0.45, - 108.6 ), new Vector3( 0.85, 0.45, 0.3 ), - 0.85, { tag: 'bench' } );
-		const lw = lampPost( B, 44.3, g( 44.3, - 106.2 ), - 106.2, - 2.4, 3.3, rand.next() );
-		lights.push( { position: lw, color: new Color( 1.0, 0.72, 0.42 ), intensity: 5, kind: 'lantern' } );
-		colliders.addCylinder( 44.3, - 106.2, 0.1, g( 44.3, - 106.2 ), g( 44.3, - 106.2 ) + 3.4, { tag: 'lampPost' } );
-		this.foundationChecks.push( { x: 44.3, y: g( 44.3, - 106.2 ), z: - 106.2 } );
-		for ( const [ x, z ] of [ [ 37.4, - 115.6 ], [ 38.1, - 116.1 ] ] ) {
-
-			this.inst.add( 'barrel', x, g( x, z ) - 0.02, z, rand.range( 0, 6 ), [ rand.range( 0.85, 1.05 ), 0.92, 0.85 ] );
-			colliders.addCylinder( x, z, 0.32, g( x, z ), g( x, z ) + 0.9, { tag: 'barrel' } );
-
-		}
-
-		this.footprints.push( { x: 41.5, z: - 111, r: 6, kind: 'plaza' } );
-
-	}
-
-	// ------------------------------------------------------------------ beach props
-
-	_beachProps( ctx ) {
-
-		const { B, terrain, colliders, rand } = ctx;
-		const g = ( x, z ) => terrain.heightAt( x, z );
-		const box = ( x, y, z, hx, hy, hz, ry, tag ) => colliders.addBox( new Vector3( x, y, z ), new Vector3( hx, hy, hz ), ry, { tag } );
-
-		// rowboats pulled up on the sand: two upturned ones down the beach west of Joe's fish stand (kept
-		// clear of it), one by the pier foot
-		const BX = - 26; // the upturned pair and their oars, relative to where they first stood by the stand
-		const boats = [
-			{ x: 46.8 + BX, z: - 57.2, ry: 0.35, up: true, hull: lin( 0x2f8f9a ), bottom: lin( 0xa0402e ) },
-			{ x: 43.9 + BX, z: - 59.8, ry: 0.55, up: true, hull: lin( 0xe9e4d6 ), bottom: lin( 0x2e5f86 ) },
-			{ x: 63.5, z: - 55.6, ry: - 0.35, up: false, hull: lin( 0xd8c35a ), bottom: lin( 0x3e6f5a ), rz: 0.14 },
-		];
-		for ( const b of boats ) {
-
-			const gy = g( b.x, b.z );
-			rowboat( B, b.x, gy + ( b.up ? 0.0 : 0.05 ), b.z, b.ry, { upsideDown: b.up, seed: rand.next(), hull: b.hull, bottom: b.bottom, trim: C.white, rz: b.rz || 0 } );
-			box( b.x, gy + 0.4, b.z, 0.72, 0.45, 2.0, b.ry, 'rowboat' );
-			this.footprints.push( { x: b.x, z: b.z, r: 2.4, kind: 'prop' } );
-
-		}
-
-		// one more boat pulled up next to the boathouse, and an old wreck by the waterline
-		{
-
-			const bx = 84.6, bz = - 53.2, gy = g( bx, bz );
-			rowboat( B, bx, gy + 0.03, bz, 0.45, { seed: rand.next(), hull: lin( 0xd0e4ea ), bottom: lin( 0xb04a30 ), trim: lin( 0x2f5f7a ), rz: - 0.16, oars: false } );
-			box( bx, gy + 0.4, bz, 0.72, 0.45, 2.0, 0.45, 'rowboat' );
-			this.footprints.push( { x: bx, z: bz, r: 2.4, kind: 'prop' } );
-			const wx = 102.5, wz = - 49.8;
-			wreck( B, wx, g( wx, wz ) - 0.12, wz, 0.95, rand, { rz: 0.22, beam: 3.1, depth: 1.05 } );
-			box( wx, g( wx, wz ) + 0.4, wz, 1.3, 0.6, 3.6, 0.95, 'wreck' );
-			this.footprints.push( { x: wx, z: wz, r: 4, kind: 'prop' } );
-
-		}
-
-		// oars leaning against the first upturned boat, oars on the sand
-		oar( B, [ 48.1 + BX, g( 48.1 + BX, - 55.7 ) + 0.03, - 55.7 ], [ 49.6 + BX, g( 49.6 + BX, - 57.9 ) + 0.05, - 57.9 ], rand.next(), lin( 0xc23b2e ) );
-		oar( B, [ 48.4 + BX, g( 48.4 + BX, - 55.4 ) + 0.03, - 55.4 ], [ 49.9 + BX, g( 49.9 + BX, - 57.6 ) + 0.06, - 57.6 ], rand.next(), lin( 0xc23b2e ) );
-
-		// net drying racks
-		const racks = [ [ 41.8, - 64.2, 0.25, lin( 0x3f6f5f ) ], [ 74.6, - 58.6, - 0.12, lin( 0x2f5f8a ) ], [ 86.4, - 64.0, 0.3, lin( 0xb0553a ) ] ];
-		for ( const [ x, z, ry, tint ] of racks ) {
-
-			const cy = Math.cos( ry ), sy = Math.sin( ry );
-			netRack( B, x, g( x, z ), z, ry, 3.2, tint, rand.next(), ( lx, lz ) => g( x + lx * cy + lz * sy, z - lx * sy + lz * cy ) );
-			for ( const sx of [ - 1.6, 1.6 ] ) {
-
-				const px = x + sx * cy, pz = z - sx * sy;
-				colliders.addCylinder( px, pz, 0.1, g( px, pz ) - 0.4, g( px, pz ) + 2.0, { tag: 'rack' } );
-				this.foundationChecks.push( { x: px, y: g( px, pz ) - 0.4, z: pz } );
-
-			}
-
-			this.footprints.push( { x, z, r: 2.2, kind: 'prop' } );
-
-		}
-
-		// crates, traps and barrels around the pier foot and along the beach
-		const X = PIER.x;
-		const cluster = ( items ) => {
-
-			for ( const [ type, x, z, ry, stack ] of items ) {
-
-				const gy = g( x, z );
-				const y = gy + ( stack ? stack : 0 ) - 0.02;
-				const tone = [ rand.range( 0.82, 1.08 ), rand.range( 0.84, 1.02 ), rand.range( 0.8, 0.98 ) ];
-				this.inst.add( type, x, y, z, ry, tone );
-				if ( ! stack ) {
-
-					if ( type === 'barrel' ) colliders.addCylinder( x, z, 0.32, gy, gy + 0.9, { tag: 'barrel' } );
-					else box( x, gy + 0.25, z, type === 'trap' ? 0.48 : 0.33, 0.3, type === 'trap' ? 0.28 : 0.24, ry, type );
-
-				}
-
-			}
-
-		};
-
-		cluster( [
-			[ 'barrel', X + 2.4, - 62.4, 0.4 ], [ 'barrel', X + 3.05, - 62.9, 1.9 ], [ 'crate', X + 2.6, - 61.2, 0.1 ],
-			[ 'crate', X + 2.65, - 61.25, 0.4, 0.4 ], [ 'trap', X - 2.6, - 61.0, 0.05 ], [ 'trap', X - 2.65, - 61.6, 0.08 ], [ 'trap', X - 2.6, - 61.3, 0.2, 0.31 ],
-			[ 'crate', X - 3.4, - 62.4, 0.6 ],
-			[ 'trap', 64.5, - 61.6, 0.3 ], [ 'trap', 65.3, - 61.2, 0.15 ], [ 'trap', 64.9, - 61.4, 0.5, 0.31 ], [ 'trap', 64.6, - 61.5, 1.9, 0.62 ],
-			[ 'barrel', 71.3, - 62.3, 0.1 ], [ 'crate', 71.1, - 61.2, 0.3 ], [ 'crate', 71.9, - 61.4, 1.3 ],
-			[ 'trap', 83.2, - 67.4, 0.4 ], [ 'trap', 83.9, - 67.9, 0.2 ], [ 'barrel', 82.6, - 68.9, 0.7 ],
-			[ 'crate', 88.0, - 53.0, 0.2 ], [ 'crate', 88.1, - 53.0, 0.6, 0.4 ], [ 'barrel', 89.0, - 52.2, 0.3 ],
-			[ 'trap', 34.6, - 68.6, 0.3 ], [ 'trap', 35.3, - 68.2, 0.1 ], [ 'crate', 39.6, - 68.9, 0.5 ],
-		] );
-
-		// loose buoys and rope coils on the sand
-		const pal = [ [ C.orange, C.white ], [ C.red, C.white ], [ C.yellow, C.black ], [ C.white, C.blue ] ];
-		for ( const [ x, z ] of [ [ 60.8, - 60.3 ], [ 61.3, - 60.9 ], [ 66.2, - 58.4 ], [ 89.6, - 51.2 ], [ 45.2, - 62.3 ] ] ) {
-
-			const [ a, b ] = rand.pick( pal );
-			buoy( B, x, g( x, z ) - 0.02, z, a, b, rand.chance( 0.5 ) ? 0 : 2, rand.next(), { rz: 1.4, ry: rand.range( 0, 6 ) } );
-
-		}
-
-		ropeCoil( B, 59.6, g( 59.6, - 59.2 ), - 59.2, 0.08, 0.34, 5, rand.next() );
-		ropeCoil( B, 90.4, g( 90.4, - 52.4 ), - 52.4, 0.08, 0.28, 4, rand.next(), C.ropeBlue );
-
-		// a buoy string on a line of old posts east of the pier foot
-		for ( let i = 0; i < 5; i ++ ) {
-
-			const x = 57.8 + i * 1.6, z = - 67.8 - i * 0.25;
-			B.cyl( 'wood', x, g( x, z ) - 0.4, z, 0.06, 0.07, 1.65, { segs: 6, data: WOOD( rand.next(), 0.95 ) } );
-			colliders.addCylinder( x, z, 0.08, g( x, z ) - 0.4, g( x, z ) + 1.25, { tag: 'post' } );
-			this.foundationChecks.push( { x, y: g( x, z ) - 0.4, z } );
-			if ( i > 0 ) {
-
-				const px = 57.8 + ( i - 1 ) * 1.6, pz = - 67.8 - ( i - 1 ) * 0.25;
-				B.tube( 'rope', [ new Vector3( px, g( px, pz ) + 1.15, pz ), new Vector3( ( px + x ) / 2, ( g( px, pz ) + g( x, z ) ) / 2 + 0.95, ( pz + z ) / 2 ), new Vector3( x, g( x, z ) + 1.15, z ) ], 0.014, { radial: 4, tint: C.rope, data: [ rand.next(), 0, 0, 0 ] } );
-
-			}
-
-		}
-
-	}
-
-	// ------------------------------------------------------------------ village props
-
-	_villageProps( ctx ) {
-
-		const { B, terrain, colliders, rand, lights } = ctx;
-		const g = ( x, z ) => terrain.heightAt( x, z );
-
-		// laundry line in the side yard of the house (west of it) and a little clutter by it and the shed
-		const cloth = [ lin( 0xf2f0ea ), lin( 0xd9534a ), lin( 0x4f8fc0 ), lin( 0xf0c850 ), lin( 0x7fbf9f ), lin( 0xe89ab0 ) ];
-		const pole = ( x, z ) => {
-
-			B.cyl( 'wood', x, g( x, z ) - 0.3, z, 0.04, 0.05, 2.5, { segs: 6, data: WOOD( rand.next(), 0.9 ) } );
-			colliders.addCylinder( x, z, 0.06, g( x, z ) - 0.3, g( x, z ) + 2.2, { tag: 'pole' } );
-			this.foundationChecks.push( { x, y: g( x, z ) - 0.3, z } );
-			return [ x, g( x, z ) + 2.1, z ];
-
-		};
-
-		laundryLine( B, pole( 22.4, - 146.6 ), pole( 22.0, - 151.6 ), rand, cloth );
-
-		const clutter = [
-			[ 'trap', 47.9, - 150.2, 0.6 ], [ 'trap', 48.2, - 150.8, 0.4 ],
-			[ 'barrel', 25.4, - 157.4, 0.5 ], [ 'barrel', 26.1, - 157.8, 1.5 ],
-			[ 'crate', 36.4, - 155.8, 0.3 ], [ 'crate', 36.45, - 155.85, 0.9, 0.4 ],
-		];
-		for ( const [ type, x, z, ry, stack ] of clutter ) {
-
-			const gy = g( x, z );
-			this.inst.add( type, x, gy + ( stack || 0 ) - 0.02, z, ry, [ rand.range( 0.82, 1.08 ), rand.range( 0.84, 1.02 ), rand.range( 0.8, 0.98 ) ] );
-			if ( ! stack ) {
-
-				if ( type === 'barrel' ) colliders.addCylinder( x, z, 0.32, gy, gy + 0.9, { tag: 'barrel' } );
-				else colliders.addBox( new Vector3( x, gy + 0.25, z ), new Vector3( type === 'trap' ? 0.48 : 0.33, 0.3, type === 'trap' ? 0.28 : 0.24 ), ry, { tag: type } );
-
-			}
-
-		}
-
-		// path lights along the walk from the plaza up to the house
-		for ( const [ x, z ] of [ [ 44.2, - 124.0 ], [ 43.0, - 134.5 ], [ 37.0, - 141.5 ] ] ) {
-
-			const w = pathLight( B, x, g( x, z ) - 0.25, z, rand.next() );
-			lights.push( { position: w, color: new Color( 1.0, 0.7, 0.4 ), intensity: 2.5, kind: 'pathLight' } );
-			colliders.addCylinder( x, z, 0.1, g( x, z ) - 0.25, g( x, z ) + 0.95, { tag: 'pathLight' } );
-			this.foundationChecks.push( { x, y: g( x, z ) - 0.25, z } );
-
-		}
-
-	}
-
-	// ------------------------------------------------------------------ places to visit
-
-	// a lookout at the top of the hiking trail and a jetty off the east beach (the beach huts are in
-	// the layout)
-	_places( ctx ) {
-
-		const { B, terrain, colliders, rand, lights } = ctx;
-		const g = ( x, z ) => terrain.heightAt( x, z );
-		const wd = ( w = 0.8 ) => WOOD( rand.next(), w, 0.6, 0 );
-		const box = ( x, y, z, hx, hy, hz, ry, opts ) => colliders.addBox( new Vector3( x, y, z ), new Vector3( hx, hy, hz ), ry, opts );
-
-		// lookout: a timber platform at the end of the trail, looking south over the bay
-		{
-
-			const { x: cx, z: cz, yaw: ry } = PLACES.lookout, W = 4.2, D = 3.2;
-			const cs = Math.cos( ry ), sn = Math.sin( ry );
-			const at = ( lx, lz ) => [ cx + lx * cs + lz * sn, cz - lx * sn + lz * cs ];
-			let top = - Infinity;
-			for ( const [ lx, lz ] of [ [ - W / 2, - D / 2 ], [ W / 2, - D / 2 ], [ - W / 2, D / 2 ], [ W / 2, D / 2 ] ] ) top = Math.max( top, g( ...at( lx, lz ) ) );
-			const deck = top + 0.45;
-			B.box( 'wood', cx, deck - 0.05, cz, W, 0.1, D, { ry, grain: 0, data: wd( 0.9 ) } );
-			box( cx, deck - 0.05, cz, W / 2, 0.05, D / 2, ry, { walkable: true, solid: true, tag: 'lookout' } );
-			for ( const [ lx, lz ] of [ [ - W / 2 + 0.15, - D / 2 + 0.15 ], [ W / 2 - 0.15, - D / 2 + 0.15 ], [ - W / 2 + 0.15, D / 2 - 0.15 ], [ W / 2 - 0.15, D / 2 - 0.15 ] ] ) {
-
-				const [ x, z ] = at( lx, lz );
-				const gy = g( x, z ) - 0.3;
-				B.box( 'wood', x, ( gy + deck + 1.0 ) / 2, z, 0.14, deck + 1.0 - gy, 0.14, { ry, grain: 1, data: wd() } );
-				this.foundationChecks.push( { x, y: gy, z } );
-
-			}
-
-			// railing on the three open sides (the trail arrives from the back, -z)
-			for ( const [ ax, az, bx, bz ] of [ [ - W / 2, D / 2, W / 2, D / 2 ], [ - W / 2, - D / 2, - W / 2, D / 2 ], [ W / 2, - D / 2, W / 2, D / 2 ] ] ) {
-
-				const [ x0, z0 ] = at( ax, az ), [ x1, z1 ] = at( bx, bz );
-				for ( const h of [ 0.5, 0.95 ] ) B.beam( 'wood', [ x0, deck + h, z0 ], [ x1, deck + h, z1 ], 0.07, 0.07, { data: wd() } );
-				const mx = ( x0 + x1 ) / 2, mz = ( z0 + z1 ) / 2, len = Math.hypot( x1 - x0, z1 - z0 );
-				box( mx, deck + 0.5, mz, ax === bx ? 0.06 : len / 2, 0.5, ax === bx ? len / 2 : 0.06, ry, { tag: 'lookoutRail' } );
-
-			}
-
-			const [ bx, bz ] = at( 0, D / 2 - 0.6 );
-			bench( B, bx, deck, bz, ry + Math.PI, 1.8, rand.next(), lin( 0x4f8fa0 ) );
-			box( bx, deck + 0.45, bz, 0.9, 0.45, 0.3, ry, { tag: 'bench' } );
-			const [ lx, lz ] = at( - W / 2 - 0.5, - D / 2 - 0.4 );
-			const w = pathLight( B, lx, g( lx, lz ) - 0.25, lz, rand.next() );
-			lights.push( { position: w, color: new Color( 1.0, 0.7, 0.4 ), intensity: 2.5, kind: 'pathLight' } );
-			this.footprints.push( { x: cx, z: cz, r: 4, kind: 'prop' } );
-
-		}
-
-		// jetty off the east beach: a plank deck on piles running out to ~3 m of water, a light at the end
-		{
-
-			const { z, x0, x1 } = PLACES.jetty, deck = 1.45, half = 1.0, step = 3.2;
-			for ( let x = x0; x < x1; x += step ) {
-
-				const xe = Math.min( x + step, x1 );
-				B.box( 'wood', ( x + xe ) / 2, deck - 0.05, z, xe - x - 0.02, 0.1, half * 2, { grain: 0, data: wd( 0.95 ) } );
-				for ( const s of [ - 1, 1 ] ) {
-
-					const pz = z + s * ( half - 0.1 );
-					const sea = g( x, pz ) - 0.6;
-					B.cyl( 'wood', x, sea, pz, 0.11, 0.13, deck - sea, { segs: 7, data: wd() } );
-					colliders.addCylinder( x, pz, 0.13, sea, deck, { tag: 'jettyPile' } );
-					this.foundationChecks.push( { x, y: sea, z: pz } );
-
-				}
-
-			}
-
-			box( ( x0 + x1 ) / 2, deck - 0.05, z, ( x1 - x0 ) / 2, 0.05, half, 0, { walkable: true, solid: true, tag: 'jettyDeck' } );
-			for ( const s of [ - 1, 1 ] ) B.cyl( 'wood', x1 - 0.4, deck, z + s * ( half - 0.25 ), 0.12, 0.12, 0.5, { segs: 8, data: wd() } );
-			const w = pathLight( B, x1 - 1.2, deck, z + half - 0.2, rand.next() );
-			lights.push( { position: w, color: new Color( 1.0, 0.72, 0.42 ), intensity: 3, kind: 'pathLight' } );
-			for ( let x = x0; x < 272; x += 3 ) this.footprints.push( { x, z, r: 2, kind: 'prop' } );
-
-		}
 
 	}
 
@@ -747,7 +439,7 @@ export class Village {
 	update( dt = 1 / 60 ) {
 
 		this._updateLanterns( dt );
-		this._updateDoors( dt );
+		updateDoors( this.doors, dt );
 
 		// all other animation (flags, nets, laundry, lantern flicker) runs on the GPU from G.time / G.windDir / G.night
 		const s = this._swing;
@@ -773,70 +465,6 @@ export class Village {
 		}
 
 		this.sign.rotation.set( s.a, s.b, 0 );
-
-	}
-
-	// A hinged door: geometry goes into spec.B (door-local: hinge at the origin, the leaf along +x,
-	// facing +z); the village turns it about the hinge (yaw + angle). spec.blocker (a collider) is
-	// solid while the door is shut.
-	_addDoor( spec ) {
-
-		const D = {
-			B: new Builder(), hinge: spec.hinge, yaw: spec.yaw, openAngle: spec.openAngle ?? 1.6,
-			blocker: spec.blocker || null, target: spec.open ? 1 : 0, t: spec.open ? 1 : 0, group: null,
-			toggle() {
-
-				this.target = this.target > 0.5 ? 0 : 1;
-
-			},
-		};
-		if ( D.blocker ) D.blocker.solid = D.t < 0.5;
-		this.doors.push( D );
-		return D;
-
-	}
-
-	_buildDoors() {
-
-		for ( const D of this.doors ) {
-
-			const g = new Group();
-			g.name = 'village_door';
-			g.position.copy( D.hinge );
-			for ( const key of [ 'wood', 'hard' ] ) {
-
-				const b = D.B.batches[ key ];
-				if ( ! b || b.vcount === 0 ) continue;
-				const mesh = new Mesh( b.build(), this.materials[ key ] );
-				mesh.name = 'village_door_' + key;
-				mesh.castShadow = true;
-				mesh.receiveShadow = true;
-				g.add( mesh );
-
-			}
-
-			D.B = null;
-			D.group = g;
-			g.rotation.y = D.yaw + D.openAngle * D.t;
-			this.group.add( g );
-
-		}
-
-	}
-
-	_updateDoors( dt ) {
-
-		for ( const D of this.doors ) {
-
-			if ( D.t === D.target || ! D.group ) continue;
-			const step = dt / 0.7;
-			D.t = D.target > D.t ? Math.min( D.target, D.t + step ) : Math.max( D.target, D.t - step );
-			const e = D.t * D.t * ( 3 - 2 * D.t );
-			D.group.rotation.y = D.yaw + D.openAngle * e;
-			// solid while (nearly) shut, so it never pushes you out of the doorway while swinging
-			if ( D.blocker ) D.blocker.solid = D.t < 0.15;
-
-		}
 
 	}
 
