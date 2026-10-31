@@ -46,7 +46,7 @@ import { LocalLights, addVillageLights, addBoatLights } from './materials/LocalL
 import { WaterQuery } from './ocean/WaterQuery.js';
 import { Breakers } from './ocean/Breakers.js';
 import { SurfFoam } from './ocean/SurfFoam.js';
-import { Spray } from './fx/Spray.js';
+import { Spray, SPRAY } from './fx/Spray.js';
 import { SeaDetail } from './ocean/SeaDetail.js';
 import { MarineSnow } from './fx/MarineSnow.js';
 import { AirMotes } from './fx/AirMotes.js';
@@ -542,6 +542,24 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 	}
 
+	// a thin trail of smoke from the chimneys (spray mist: drifts with the wind), within view range
+	emitChimneySmoke( dt ) {
+
+		if ( ! this.village || ! this.village.chimneys.length || ! this.spray ) return;
+		this._smokeT = ( this._smokeT ?? 0 ) - dt;
+		if ( this._smokeT > 0 ) return;
+		this._smokeT = 0.12;
+		const cam = this.camera.position;
+		const v = this._smokeV || ( this._smokeV = new Vector3( 0, 0.9, 0 ) );
+		for ( const c of this.village.chimneys ) {
+
+			if ( c.distanceToSquared( cam ) > 260 * 260 ) continue;
+			this.spray.emit( c, v, 2, 0.22, SPRAY.MIST, { spread: 0.25, jitter: 0.12, life: 6, sizeJitter: 0.6 } );
+
+		}
+
+	}
+
 	// sleep until morning: fade to black, set the clock to 7:15, fade back in
 	sleep() {
 
@@ -760,6 +778,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		if ( this.shoreSim ) this.shoreSim.update();
 		this.underwaterLighting.update( this.camera );
 		this.breakers.update( this.camera );
+		this.emitChimneySmoke( dt );
 		this.spray.update();
 		if ( this.clouds ) this.clouds.update( dt, this.camera );
 		this.environment.update( dt );
@@ -827,8 +846,27 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		f.up.set( 0, 1, 0 ).applyQuaternion( cam.quaternion );
 		const h = this.cameraWaterHeight ?? 0;
 		const coast = this.terrainData.coastDistance( p.x, p.z ).d;
+		// inside a room (eased), and the nearest fireplace
+		const V = this.village;
+		const ind = V ? V.indoorAt( p.x, p.y, p.z ) : 0;
+		this._indoor = ( this._indoor ?? 0 ) + ( ind - ( this._indoor ?? 0 ) ) * ( 1 - Math.exp( - dt / 0.3 ) );
+		let fire = null, fd = Infinity;
+		if ( V ) for ( const q of V.fires ) {
+
+			const dd = q.distanceToSquared( p );
+			if ( dd < fd ) {
+
+				fd = dd;
+				fire = q;
+
+			}
+
+		}
+
 		this.audio.update( dt, {
 			listener: { position: p, forward: f.fwd, up: f.up },
+			indoor: this._indoor,
+			fire,
 			underwater: p.y < h ? 1 : 0,
 			depthBelowSurface: Math.max( 0, h - p.y ),
 			surfIntensity: Math.min( 1, this.shore.amplitude.value / 0.6 ),

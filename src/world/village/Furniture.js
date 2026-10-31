@@ -13,7 +13,7 @@ import { quad01Part } from './GeoBuilder.js';
 
 const SEAT_Y = 0.46;
 
-export function furnitureKit( { B, rand, colliders, lights, interact = null }, yaw ) {
+export function furnitureKit( { B, rand, colliders, lights, interact = null, fire = null }, yaw ) {
 
 	let ry = 0;
 	const rot = [];
@@ -266,7 +266,9 @@ export function furnitureKit( { B, rand, colliders, lights, interact = null }, y
 			B.cyl( 'hard', 0.05, 1.21, 0.3, 0.07, 0.08, 0.16, { segs: 10, tint: lin( 0x6d8fa6 ), data: hd( 0, 0, 0.3 ) } );
 			B.cyl( 'hard', 0.45, 1.21, 0.3, 0.025, 0.025, 0.18, { segs: 8, tint: lin( 0xf2ead8 ), data: hd( 0, 0, 0.7 ) } );
 			kit.solid( 0, 0.6, 0.3, w, 1.2, 0.6 );
-			return kit.light( 0, 0.45, 0.6, new Color( 1.0, 0.55, 0.25 ), 2.4 );
+			const pos = kit.light( 0, 0.45, 0.6, new Color( 1.0, 0.55, 0.25 ), 2.4 );
+			if ( fire ) fire( pos ); // (the crackle in SoundScape)
+			return pos;
 
 		},
 

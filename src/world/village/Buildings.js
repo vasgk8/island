@@ -895,6 +895,7 @@ export function buildHouse( ctx, s ) {
 
 	}
 
+	let chimneyTop = null;
 	if ( s.chimney ) {
 
 		const sx = s.chimney;
@@ -907,6 +908,8 @@ export function buildHouse( ctx, s ) {
 		B.cyl( 'stone', cxl, top + 0.08, czl, 0.1, 0.12, 0.3, { segs: 8, tint: lin( 0xa86a4a ), data: [ rand.next(), 1, 0, 0 ] } );
 		checks.push( fr.worldPt( cxl, g - 0.3, czl ) );
 		fr.addBoxL( cxl, g + hh / 2 - 0.3, czl, 0.36, hh / 2, 0.41, { tag: 'chimney' } );
+		const cw = toW( cxl, czl );
+		chimneyTop = new Vector3( cw.x, top + 0.45, cw.z );
 
 	}
 
@@ -1034,7 +1037,7 @@ export function buildHouse( ctx, s ) {
 	else fr.addBoxL( 0, ( bodyBot + roofTop ) / 2, 0, w / 2 + 0.06, ( roofTop - bodyBot ) / 2, d / 2 + 0.06, { tag: 'house' } );
 
 	return {
-		floorY, roofTop, interior,
+		floorY, roofTop, interior, chimneyTop,
 		footprint: { x, z, r: Math.hypot( w, d + Math.max( pd, annexD ) * 2 ) / 2 + 0.8, kind: 'building' },
 	};
 

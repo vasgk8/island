@@ -76,6 +76,8 @@ export class Village {
 		this.doors = [];
 		this.interactables = [];
 		this.interiors = [];
+		this.fires = []; // fireplaces (world positions)
+		this.chimneys = []; // chimney tops that smoke (App: spray mist)
 		this.group = new Group();
 		this.group.name = 'Village';
 
@@ -98,6 +100,7 @@ export class Village {
 			door: ( spec ) => this._addDoor( spec ),
 			interact: ( it ) => this.interactables.push( it ),
 			interior: ( room ) => this.interiors.push( room ),
+			fire: ( p ) => this.fires.push( p ),
 		} );
 
 		// the fish sign at the pier entrance is its own small mesh: it swings in the wind (update())
@@ -115,7 +118,13 @@ export class Village {
 
 			const B = s.harbor ? this.harbor : this.town;
 			const res = buildHouse( ctx( B ), s );
-			if ( res.interior ) furnishRoom( ctx( B ), res.interior, s.layout || 'house' );
+			if ( res.interior ) {
+
+				furnishRoom( ctx( B ), res.interior, s.layout || 'house' );
+				// a house with a lit hearth inside smokes
+				if ( res.chimneyTop && ( s.layout || 'house' ) === 'house' ) this.chimneys.push( res.chimneyTop );
+
+			}
 			this.buildings.push( { name: s.name, x: s.x, z: s.z, floorY: res.floorY, roofTop: res.roofTop, stilts: s.foundation === 'stilts', footprint: res.footprint } );
 			this.footprints.push( res.footprint );
 
@@ -139,6 +148,7 @@ export class Village {
 		if ( HIDDEN_HOME.F !== undefined ) {
 
 			this.hiddenHome = buildHiddenHome( ctx( this.town ) );
+			if ( this.hiddenHome.chimneyTop ) this.chimneys.push( this.hiddenHome.chimneyTop );
 			this.footprints.push( { x: HIDDEN_HOME.x, z: HIDDEN_HOME.z, r: 5.2, kind: 'building' } );
 
 		}
@@ -860,6 +870,26 @@ export class Village {
 			if ( D.blocker ) D.blocker.solid = D.t < 0.15;
 
 		}
+
+	}
+
+	// 0..1: how far inside a room (x, y, z) is (1 well inside, fading over the last 0.4 m and the doorway)
+	indoorAt( x, y, z ) {
+
+		let best = 0;
+		for ( const r of this.interiors ) {
+
+			if ( y < r.floorY - 0.5 || y > r.ceilY + 0.3 ) continue;
+			const c = Math.cos( r.yaw ), s = Math.sin( r.yaw );
+			const dx = x - r.x, dz = z - r.z;
+			const lx = dx * c - dz * s, lz = dx * s + dz * c;
+			const ex = r.hx - Math.abs( lx ), ez = r.hz - Math.abs( lz );
+			if ( ex < 0 || ez < 0 ) continue;
+			best = Math.max( best, Math.min( 1, Math.min( ex, ez ) / 0.4 ) );
+
+		}
+
+		return best;
 
 	}
 

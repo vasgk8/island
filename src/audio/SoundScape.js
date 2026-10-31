@@ -46,6 +46,37 @@ const smooth = ( a, b, x ) => {
 };
 
 const dB = ( d ) => Math.pow( 10, d / 20 );
+
+// white noise (mono) for the fire
+function noiseBuffer( c, seconds ) {
+
+	const b = c.createBuffer( 1, Math.round( c.sampleRate * seconds ), c.sampleRate );
+	const d = b.getChannelData( 0 );
+	for ( let i = 0; i < d.length; i ++ ) d[ i ] = Math.random() * 2 - 1;
+	return b;
+
+}
+
+// a small room's echo: stereo noise decaying exponentially (decay = time constant, s)
+function roomImpulse( c, seconds, decay ) {
+
+	const n = Math.round( c.sampleRate * seconds );
+	const b = c.createBuffer( 2, n, c.sampleRate );
+	for ( let ch = 0; ch < 2; ch ++ ) {
+
+		const d = b.getChannelData( ch );
+		for ( let i = 0; i < n; i ++ ) {
+
+			const t = i / c.sampleRate;
+			d[ i ] = ( Math.random() * 2 - 1 ) * Math.exp( - t / decay ) * ( t < 0.004 ? t / 0.004 : 1 ) * 0.5;
+
+		}
+
+	}
+
+	return b;
+
+}
 const MONO = dB( - 3 ); // a mono file plays on both channels: +3 dB against its (mono) measured loudness
 
 // Target loudness (LUFS, momentary) of each sound in its reference situation.
@@ -260,6 +291,7 @@ export class SoundScape {
 			this._life( step );
 			this._birds( now, step );
 			this._whale( now, step );
+			this._fire( now, step );
 
 		} catch ( e ) {
 
@@ -403,7 +435,26 @@ export class SoundScape {
 		this.above = gain( 1, muffle1 );
 		this.under = gain( 0, this.master );
 		this.near = gain( 1, this.master );
-		this.foot = gain( 1, this.above );
+		// footsteps: through the outdoor muffle outside, dry (and into the room echo) indoors
+		this.foot = gain( 1 );
+		this.footOut = gain( 1, this.above );
+		this.footIn = gain( 0, this.near );
+		this.foot.connect( this.footOut );
+		this.foot.connect( this.footIn );
+
+		// indoors: a short room echo (convolver with a generated impulse response)
+		this.room = c.createConvolver();
+		this.room.buffer = roomImpulse( c, 0.7, 0.16 );
+		this.roomOut = gain( 0, this.master );
+		this.room.connect( this.roomOut );
+		this.footIn.connect( gain( 0.45, this.room ) );
+
+		// a fire in the hearth (procedural: a low roar and random crackles), at the nearest fireplace
+		this.firePan = panner( this.near, 1.5, 1.3 );
+		this.fireLP = lowpass( 16000, 0.6, this.firePan );
+		this.fireOut = gain( 0, this.fireLP );
+		this.fireOut.connect( gain( 0.5, this.room ) );
+		this._noise = noiseBuffer( c, 2 );
 
 		// distant surf: from the shore direction
 		this.surfPan = panner( this.above, 1, 0 );
@@ -849,6 +900,9 @@ export class SoundScape {
 		e.wind = clamp( num( s.windSpeed, 7 ), 0, 40 );
 		e.day = clamp( num( s.daylight, 1 ), 0, 1 );
 		e.nearPier = !! s.nearPier;
+		e.indoor = clamp( num( s.indoor, 0 ), 0, 1 );
+		const fp = s.fire || null;
+		e.fire = fp && Number.isFinite( fp.x ) ? fp : null;
 		e.hour = typeof s.timeOfDay === 'number' && Number.isFinite( s.timeOfDay ) ? ( ( s.timeOfDay % 24 ) + 24 ) % 24 : null;
 		const b = s.boat || EMPTY, bp = b.position || EMPTY, eb = e.boat;
 		eb.active = !! b.active;
@@ -906,10 +960,15 @@ export class SoundScape {
 		const deep = clamp( e.depth / 12, 0, 1 );
 
 		// underwater: steep low-pass on everything above the surface, the reef bed faded in
-		const f = Math.exp( lerp( Math.log( 20000 ), Math.log( lerp( 520, 260, deep ) ), u ) );
+		// indoors: the world outside comes through the walls dull and quieter, with a little room echo
+		const ind = e.indoor * ( 1 - u );
+		const f = Math.min( Math.exp( lerp( Math.log( 20000 ), Math.log( lerp( 520, 260, deep ) ), u ) ), Math.exp( lerp( Math.log( 20000 ), Math.log( 900 ), ind ) ) );
 		this._ramp( this.muffle[ 0 ].frequency, f, 0.04 );
 		this._ramp( this.muffle[ 1 ].frequency, Math.min( 20000, f * 1.4 ), 0.04 );
-		this._ramp( this.aboveOut.gain, lerp( 1, 0.4 / ( 1 + e.depth / 5 ), u ), 0.05 );
+		this._ramp( this.aboveOut.gain, lerp( 1, 0.4 / ( 1 + e.depth / 5 ), u ) * lerp( 1, 0.5, ind ), 0.05 );
+		this._ramp( this.footOut.gain, 1 - ind, 0.15 );
+		this._ramp( this.footIn.gain, ind, 0.15 );
+		this._ramp( this.roomOut.gain, ind * 0.55, 0.3 );
 		this._ramp( this.under.gain, u, 0.06 );
 		const wantUnder = u > 0 || ( ! e.onLand && e.ly < 2.5 );
 		this._bed( 'under_reef', wantUnder ? dB( MIX.reef ) * ( 0.8 + 0.3 * deep ) / dB( BANK.under_reef.lufs ) : 0, now, 0.5 );
@@ -1260,6 +1319,78 @@ export class SoundScape {
 	// ------------------------------------------------------------------ helpers
 
 	// smooth parameter ramp; skips negligible changes to keep the automation timeline short
+	// the hearth: a looped low roar and crackles scheduled at random (about 9 a second), heard within
+	// ~25 m of the nearest fire; duller from outside the room
+	_fire( now, dt ) {
+
+		const e = this.env, fp = e.fire;
+		const d = fp ? Math.hypot( fp.x - e.lx, fp.y - e.ly, fp.z - e.lz ) : Infinity;
+		const on = d < 25 ? 1 - smooth( 18, 25, d ) : 0;
+		this._ramp( this.fireOut.gain, on, 0.4 );
+		if ( on <= 0 ) {
+
+			if ( this._fireBed && this.fireOut.gain._t === 0 && d > 40 ) {
+
+				this._fireBed.stop();
+				this._fireBed = null;
+
+			}
+
+			return;
+
+		}
+
+		this._pos( this.firePan, fp.x, fp.y, fp.z );
+		this._ramp( this.fireLP.frequency, lerp( 2200, 16000, e.indoor ), 0.3 );
+		const c = this.ctx;
+		if ( ! this._fireBed ) {
+
+			const src = c.createBufferSource();
+			src.buffer = this._noise;
+			src.loop = true;
+			const bp = c.createBiquadFilter();
+			bp.type = 'bandpass';
+			bp.frequency.value = 260;
+			bp.Q.value = 0.8;
+			const g = c.createGain();
+			g.gain.value = 0.05;
+			src.connect( bp ).connect( g ).connect( this.fireOut );
+			src.start();
+			this._fireBed = src;
+
+		}
+
+		// crackles in this step: a Poisson count, each a short burst of high-passed noise
+		let n = 0, L = Math.exp( - 9 * dt ), p = Math.random();
+		while ( p > L && n < 6 ) {
+
+			p *= Math.random();
+			n ++;
+
+		}
+
+		for ( let i = 0; i < n; i ++ ) {
+
+			const t = now + 0.02 + Math.random() * dt;
+			const src = c.createBufferSource();
+			src.buffer = this._noise;
+			src.playbackRate.value = 0.7 + Math.random() * 0.8;
+			const hp = c.createBiquadFilter();
+			hp.type = 'highpass';
+			hp.frequency.value = 1200 + Math.random() * 3000;
+			const g = c.createGain();
+			const peak = 0.06 + Math.random() * Math.random() * 0.35, len = 0.004 + Math.random() * 0.03;
+			g.gain.setValueAtTime( 0, t );
+			g.gain.linearRampToValueAtTime( peak, t + 0.001 );
+			g.gain.exponentialRampToValueAtTime( 0.0005, t + len );
+			src.connect( hp ).connect( g ).connect( this.fireOut );
+			src.start( t, Math.random() * 1.5 );
+			src.stop( t + len + 0.02 );
+
+		}
+
+	}
+
 	_ramp( param, v, tau ) {
 
 		if ( ! Number.isFinite( v ) ) return;
