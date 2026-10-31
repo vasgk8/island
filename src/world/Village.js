@@ -5,6 +5,7 @@ import { createVillageMaterials } from './village/VillageMaterials.js';
 import { VillageTextures } from './village/TextureBaker.js';
 import { buildHouse, buildBoathouse, buildShed } from './village/Buildings.js';
 import { buildBoardwalk } from './village/Boardwalk.js';
+import { HIDDEN_HOME, carveHiddenHome, buildHiddenHome } from './village/HiddenHome.js';
 import { buildPier, PIER } from './Pier.js';
 import { G } from '../engine/render/Frame.js';
 import {
@@ -124,6 +125,12 @@ export class Village {
 		this._beachProps( ctx( this.harbor ) );
 		this._villageProps( ctx( this.town ) );
 		this._places( ctx( this.harbor ) );
+		if ( HIDDEN_HOME.F !== undefined ) {
+
+			buildHiddenHome( ctx( this.town ) );
+			this.footprints.push( { x: HIDDEN_HOME.x, z: HIDDEN_HOME.z, r: 5.2, kind: 'building' } );
+
+		}
 
 		this._assemble();
 		this._buildSign();
@@ -233,6 +240,9 @@ export class Village {
 			t.flatten( px, pz, 5.5, sum / n, 4 );
 
 		}
+
+		// the hidden home dug into the mountain (village/HiddenHome.js)
+		if ( typeof t.carveRect === 'function' ) carveHiddenHome( t );
 
 		if ( typeof t.buildMinMax === 'function' ) t.buildMinMax();
 

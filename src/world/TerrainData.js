@@ -870,6 +870,32 @@ export class TerrainData {
 
 	}
 
+	// carve a rotated rectangle to one height (a dug-in building: the walls stand on its edge).
+	// Local frame like the village builder: lx along (cos yaw, -sin yaw), lz along (sin yaw, cos yaw);
+	// the box spans lx in [-hx, hx], lz in [z0, z1]; falloff blends back to the terrain outside it.
+	carveRect( x, z, yaw, hx, z0, z1, height, falloff = 1 ) {
+
+		const { res, texel, origin } = this;
+		const c = Math.cos( yaw ), s = Math.sin( yaw );
+		const R = Math.hypot( hx, Math.max( Math.abs( z0 ), Math.abs( z1 ) ) ) + falloff + texel;
+		this.pads.push( { x, z, radius: Math.min( hx, ( z1 - z0 ) / 2 ), height } );
+		const i0 = Math.max( 0, Math.floor( ( x - R - origin ) / texel ) ), i1 = Math.min( res - 1, Math.ceil( ( x + R - origin ) / texel ) );
+		const j0 = Math.max( 0, Math.floor( ( z - R - origin ) / texel ) ), j1 = Math.min( res - 1, Math.ceil( ( z + R - origin ) / texel ) );
+		for ( let j = j0; j <= j1; j ++ ) for ( let i = i0; i <= i1; i ++ ) {
+
+			const dx = origin + ( i + 0.5 ) * texel - x, dz = origin + ( j + 0.5 ) * texel - z;
+			const lx = dx * c - dz * s, lz = dx * s + dz * c;
+			const d = Math.max( Math.abs( lx ) - hx, lz - z1, z0 - lz );
+			const t = falloff > 0 ? 1 - smoothstep( 0, falloff, d ) : ( d <= 0 ? 1 : 0 );
+			if ( t <= 0 ) continue;
+			const k = j * res + i;
+			this.heights[ k ] = lerp( this.heights[ k ], height, t );
+			this.rock[ k ] *= 1 - t;
+
+		}
+
+	}
+
 	heightAt( x, z ) {
 
 		const { res, texel, origin, heights } = this;
