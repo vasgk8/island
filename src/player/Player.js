@@ -88,6 +88,7 @@ export class Player {
 		this._ashore = null; // cached step-ashore target
 		this._ashoreT = 0;
 		this.seat = null; // sitting on a stool / chair (sit(), stand())
+		this.speedMul = 1; // the 2x speed toggle (App.toggleSpeedBoost: X)
 		this._standCooldown = 0;
 
 	}
@@ -265,7 +266,7 @@ export class Player {
 		const wade = THREE.MathUtils.clamp( depth / 1.2, 0, 1 );
 		this.wade = wade;
 		const sprint = inp.down( 'ShiftLeft' ) || inp.down( 'ShiftRight' );
-		const speed = ( sprint ? 6.2 : 3.0 ) * THREE.MathUtils.lerp( 1, 0.42, wade );
+		const speed = ( sprint ? 6.2 : 3.0 ) * this.speedMul * THREE.MathUtils.lerp( 1, 0.42, wade );
 		const accel = this.grounded ? 14 : 2.5;
 		const k = 1 - Math.exp( - accel * dt );
 		this.velocity.x += ( wish.x * speed - this.velocity.x ) * k;

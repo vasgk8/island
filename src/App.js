@@ -390,13 +390,19 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 		// back in fly mode if that is how you left
 		if ( this.prefs.fly === true && ! qs.has( 'fly' ) ) this.setFreeCam( true );
+		if ( this.prefs.speedBoost === true ) {
+
+			this.speedBoost = true;
+			this.player.speedMul = this.fly.speedMul = 2;
+
+		}
 
 	}
 
 	savePrefs() {
 
 		const s = this.settings;
-		savePrefs( { v: 1, timeOfDay: s.timeOfDay, timeSpeed: s.timeSpeed, lookScale: this.input.lookScale, fly: !! this.freeCam, renderScale: s.renderScale } );
+		savePrefs( { v: 1, timeOfDay: s.timeOfDay, timeSpeed: s.timeSpeed, lookScale: this.input.lookScale, fly: !! this.freeCam, speedBoost: !! this.speedBoost, renderScale: s.renderScale } );
 
 	}
 
@@ -653,6 +659,16 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 	}
 
+	// X (or the 2x button): walk and fly twice as fast, on top of Shift
+	toggleSpeedBoost( on = ! this.speedBoost ) {
+
+		this.speedBoost = on;
+		this.player.speedMul = on ? 2 : 1;
+		this.fly.speedMul = on ? 2 : 1;
+		if ( this.ui ) this.ui.ui.toast( on ? 'Speed ×2' : 'Normal speed' );
+
+	}
+
 	// Free (debug) camera on F; the walker / boat resumes where it was left.
 	setFreeCam( on ) {
 
@@ -760,6 +776,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 		// ---- player / boat (boat physics first so the cameras follow this frame's pose)
 		if ( this.input.hit( 'KeyF' ) ) this.setFreeCam( ! this.freeCam );
+		if ( this.input.hit( 'KeyX' ) ) this.toggleSpeedBoost();
 		if ( this.input.hit( 'KeyT' ) ) this.toggleTime();
 		if ( this.input.hit( 'KeyL' ) ) {
 

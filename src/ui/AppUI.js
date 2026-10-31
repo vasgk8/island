@@ -20,6 +20,7 @@ export class AppUI {
 		this.ui = ui;
 		ui.onModeChange = ( id ) => app.setFreeCam( id === 'fly' );
 		ui.onTimeToggle = () => app.toggleDayNight();
+		ui.onSpeedToggle = () => app.toggleSpeedBoost();
 		ui.onTimeSet = ( h ) => app.setTimeOfDay( h );
 		if ( app.touch ) {
 
@@ -303,6 +304,7 @@ export class AppUI {
 		ui.setStats( { fps: app.fps, frameMs: dt * 1000 } );
 		this.s.renderScale = app.post.scale;
 		ui.setMoveMode( app.freeCam ? 'fly' : 'walk' );
+		ui.setSpeedBoost( !! app.speedBoost );
 		ui.setNight( app.isNight() );
 		ui.setTime( app.settings.timeOfDay );
 		if ( this.minimap ) {

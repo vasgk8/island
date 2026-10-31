@@ -2833,3 +2833,9 @@ html.has-touch .tw-stats {
 .tw-root.is-photo .vi-target {
 	display: none;
 }
+
+/* the 2x speed toggle (X) next to Walk / Fly */
+.tw-move-boost {
+	min-width: calc(40 * var(--tw-u));
+	padding: 0 calc(10 * var(--tw-u));
+}

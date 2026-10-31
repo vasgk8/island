@@ -44,7 +44,7 @@ export class FlyCamera {
 		this.apply();
 
 		const fast = inp.down( 'ShiftLeft' ) || inp.down( 'ShiftRight' );
-		const speed = this.speed * ( fast ? 6 : 1 );
+		const speed = this.speed * ( fast ? 6 : 1 ) * ( this.speedMul ?? 1 ); // speedMul: the 2x toggle (X)
 		this.camera.getWorldDirection( this._fwd );
 		this._right.crossVectors( this._fwd, this.camera.up ).normalize();
 		const mv = inp.move();

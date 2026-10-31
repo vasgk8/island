@@ -1895,6 +1895,7 @@ export class UI {
 		this.onPanelToggle = null; // ( open )
 		this.onHelpToggle = null; // ( open )
 		this.onTimeToggle = null; // () the Day / Night button was clicked
+		this.onSpeedToggle = null; // () the 2x button was clicked
 		this.onTimeSet = null; // ( hours ) the time slider was dragged
 		this.onModeChange = null; // ( 'walk' | 'fly' ) a Walk / Fly button was clicked
 		// Opening the panel exits pointer lock so the cursor can reach it.
@@ -2130,6 +2131,11 @@ export class UI {
 			mode.append( b );
 
 		}
+
+		// twice as fast (X), walking or flying
+		this.boostBtn = h( 'button', 'tw-move-btn tw-move-boost', { type: 'button', text: '2×', 'aria-pressed': 'false', 'aria-label': 'Twice as fast (X)', 'data-tip': 'Twice as fast (X)' } );
+		this.boostBtn.addEventListener( 'click', () => callHook( this.onSpeedToggle ) );
+		mode.append( this.boostBtn );
 		this.timeBtn = h( 'button', 'tw-move-btn tw-mode-time', { type: 'button', text: 'Night', 'aria-label': 'Switch between day and night' } );
 		this.timeBtn.addEventListener( 'click', () => callHook( this.onTimeToggle ) );
 		// time of day: a slider and the clock (drag to set; it follows the sun otherwise)
@@ -2172,6 +2178,7 @@ export class UI {
 						<h3>Interact</h3>
 						${ row( k( 'E' ), 'Interact<small>Board, helm, step ashore</small>' ) }
 						${ row( k( 'V' ), 'Boat camera<small>1st / 3rd person</small>' ) }
+						${ row( k( 'X' ), 'Twice as fast<small>Walking or flying, on / off</small>' ) }
 						${ row( k( 'Tab' ), 'Map<small>Or click the minimap</small>' ) }
 						${ row( k( 'F' ), 'Free camera' ) }
 						${ row( k( 'T' ), 'Pause time' ) }
@@ -3055,6 +3062,16 @@ export class UI {
 			if ( this.timeRange.value !== v ) this.timeRange.value = v;
 
 		}
+
+	}
+
+	// Highlights the 2x button while the speed boost is on.
+	setSpeedBoost( on ) {
+
+		if ( this._boost === on ) return;
+		this._boost = on;
+		this.boostBtn.classList.toggle( 'is-active', on );
+		this.boostBtn.setAttribute( 'aria-pressed', String( on ) );
 
 	}
 

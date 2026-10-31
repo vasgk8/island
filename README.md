@@ -74,6 +74,7 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 | C | Crouch / dive |
 | E | Interact: board the boat, take or leave the helm, step ashore; open and close doors, sit down, sleep until morning |
 | V | Boat camera at the helm (1st / 3rd person) |
+| X | Twice as fast, walking or flying (on / off; also the 2× button at the top) |
 | Tab | Map of the island (or click / tap the minimap) |
 | F | Free camera |
 | L | Flashlight |
