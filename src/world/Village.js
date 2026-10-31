@@ -94,6 +94,7 @@ export class Village {
 			if ( res.interior ) {
 
 				furnishRoom( ctx( B ), res.interior, s.layout || 'house' );
+				if ( res.interior.upstairs ) furnishRoom( ctx( B ), res.interior.upstairs, 'bedroom' );
 				// a house with a lit hearth inside smokes
 				if ( res.chimneyTop && [ 'house', 'cabin' ].includes( s.layout || 'house' ) ) this.chimneys.push( res.chimneyTop );
 
@@ -142,7 +143,7 @@ export class Village {
 		const P = PASTELS, T = TRIMS, R = ROOFS;
 		const houses = [
 			// the two-storey house with the stone chimney above the plaza (enterable)
-			{ name: 'L', interior: true, layout: 'house', foundation: 'stone', stoneStyle: 0, curtain: CURTAINS[ 3 ], ...PLACES.house, w: 7.4, d: 5.6, stories: 2, roof: 'hip', roofMat: 'metal', roofColor: R.red, wall: P.white, trim: T.white, accent: T.green, siding: 1, porch: { depth: 2.3, rail: 'balusters' }, paint: 0.78, antenna: true, chimney: 1, doorGlass: true },
+			{ name: 'L', interior: true, upstairs: true, layout: 'house', foundation: 'stone', stoneStyle: 0, curtain: CURTAINS[ 3 ], ...PLACES.house, w: 7.4, d: 5.6, stories: 2, roof: 'hip', roofMat: 'metal', roofColor: R.red, wall: P.white, trim: T.white, accent: T.green, siding: 1, porch: { depth: 2.3, rail: 'balusters' }, paint: 0.78, antenna: true, chimney: 1, doorGlass: true },
 			// a small timber cabin near the top of the mountain, its porch looking south over the bay (enterable)
 			{ name: 'C1', interior: true, layout: 'cabin', foundation: 'stone', stoneStyle: 1, curtain: CURTAINS[ 1 ], ...PLACES.cabin, w: 4.6, d: 4.0, roof: 'gable', roofMat: 'metal', roofColor: R.green, rust: 0.35, wall: lin( 0x8a6a4a ), trim: T.cream, accent: T.red, siding: 2, porch: { depth: 1.5, rail: 'x' }, paint: 0.4, weather: 0.8, shutters: 'board', fewWindows: true, chimney: 1, porchBench: true },
 			// beach huts on the long west and east beaches (floor ~1.6 m above the sand on stilts, enterable)

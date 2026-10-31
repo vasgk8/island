@@ -75,7 +75,7 @@ check( 'the plaza and the bay beach are still land', h( 41.5, - 111 ) > 2 && h( 
 // ---------------------------------------------------------------- village interiors
 {
 
-	check( 'five rooms (hidden home, house, mountain cabin, two beach huts)', village.interiors.length === 5, village.interiors.length );
+	check( 'six rooms (hidden home, house and its upstairs, mountain cabin, two beach huts)', village.interiors.length === 6, village.interiors.length );
 	for ( const r of village.interiors ) {
 
 		check( `room at ${ r.x.toFixed( 0 ) },${ r.z.toFixed( 0 ) }: floor above the ground`, r.floorY > h( r.x, r.z ) - 0.1, `${ r.floorY.toFixed( 2 ) } vs ${ h( r.x, r.z ).toFixed( 2 ) }` );
@@ -86,11 +86,33 @@ check( 'the plaza and the bay beach are still land', h( 41.5, - 111 ) > 2 && h( 
 
 	}
 
+	{
+
+		// the house's stair: walkable steps rising to the upstairs floor
+		const r = village.interiors.find( ( q ) => Math.hypot( q.x - PLACES.house.x, q.z - PLACES.house.z ) < 1 && q.floorY < 8 );
+		const u = village.interiors.find( ( q ) => Math.hypot( q.x - PLACES.house.x, q.z - PLACES.house.z ) < 1 && q.floorY > 8 );
+		check( 'the house has an upstairs', !! u && u.floorY - r.floorY > 2.5 );
+		const c = Math.cos( r.yaw ), sn = Math.sin( r.yaw );
+		const at = ( lx, lz ) => [ r.x + lx * c + lz * sn, r.z - lx * sn + lz * c ];
+		let y = r.floorY, ok = true;
+		for ( let lz = r.hz - 0.25; lz > r.hz - 3.8; lz -= 0.13 ) {
+
+			const [ x, z ] = at( - r.hx + 0.45, lz );
+			const g = colliders.groundHeightAt( x, z, y + 0.45 );
+			if ( g > y + 0.36 || g < y - 0.05 ) ok = false;
+			y = Math.max( y, g );
+
+		}
+
+		check( 'you can walk up the stair to the upstairs floor', ok && Math.abs( y - u.floorY ) < 0.25, `reached ${ y.toFixed( 2 ) } of ${ u.floorY.toFixed( 2 ) }` );
+
+	}
+
 	check( 'outside is not indoor', village.indoorAt( PLACES.house.x, 8, PLACES.house.z + 9 ) === 0 );
 	check( 'three fireplaces', village.fires.length === 3, village.fires.length );
 	check( 'three smoking chimneys', village.chimneys.length === 3, village.chimneys.length );
 	const texts = village.interactables.map( ( it ) => typeof it.text === 'function' ? it.text() : it.text );
-	check( 'a bed to sleep in in every room', texts.filter( ( s ) => s === 'Sleep until morning' ).length === 5 );
+	check( 'a bed in every home (upstairs in the house)', texts.filter( ( s ) => s === 'Sleep until morning' ).length === 5 );
 	check( 'seats to sit on', texts.filter( ( s ) => s === 'Sit down' ).length >= 8 );
 	check( 'a door to every room', village.doors.length === 5 && texts.filter( ( s ) => /door/.test( s ) ).length === 5 );
 	{
