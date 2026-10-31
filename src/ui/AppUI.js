@@ -305,7 +305,12 @@ export class AppUI {
 		ui.setMoveMode( app.freeCam ? 'fly' : 'walk' );
 		ui.setNight( app.isNight() );
 		ui.setTime( app.settings.timeOfDay );
-		if ( this.minimap ) this.minimap.update( dt );
+		if ( this.minimap ) {
+
+			if ( app.input.hit( 'Tab' ) ) this.minimap.toggleFull();
+			this.minimap.update( dt );
+
+		}
 		this._markTarget( app.interactTarget );
 
 		const p = app.player;

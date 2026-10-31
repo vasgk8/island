@@ -15,6 +15,19 @@ const N = 640; // baked canvas size (px)
 const EXT = 1280; // metres covered by the bake
 const X0 = - EXT / 2, Z0 = - 260 - EXT / 2; // world at canvas (0, 0): the island sits north of the bay
 const PPM = N / EXT; // canvas px per metre
+const FEXT = 950, FX0 = - FEXT / 2, FZ0 = - 885; // the full map's square (m): the island and the bay
+const at = ( p ) => () => ( { x: p.x, z: p.z } );
+// kind (marker colour), icon, name, position
+const FULL_PLACES = [
+	[ 'home', 'home', 'House', at( PLACES.house ) ],
+	[ 'view', 'view', 'Lookout', at( PLACES.lookout ) ],
+	[ 'cabin', 'cabin', 'Mountain cabin', at( PLACES.cabin ) ],
+	[ 'secret', 'door', 'Hidden home', at( PLACES.hiddenHome ) ],
+	[ 'hut', 'hut', 'West beach hut', at( PLACES.hutW ) ],
+	[ 'hut', 'hut', 'East beach hut', at( PLACES.hutE ) ],
+	[ 'jetty', 'anchor', 'Jetty', at( { x: ( PLACES.jetty.x0 + PLACES.jetty.x1 ) / 2, z: PLACES.jetty.z } ) ],
+	[ 'pier', 'anchor', 'Pier', at( { x: WORLD.pier.x, z: WORLD.pier.zEnd } ) ],
+];
 const ROWS_PER_FRAME = 48;
 
 const CSS = /* css */`
@@ -56,6 +69,26 @@ const CSS = /* css */`
 @media (max-height: 860px) { .gm-map { right: calc(var(--tw-edge) + 58 * var(--tw-u)); } }
 @media (max-width: 640px) { .gm-map { width: calc(128 * var(--tw-u)); height: calc(128 * var(--tw-u)); } }
 html.has-touch .gm-map { bottom: auto; top: calc(var(--tw-edge) + 56 * var(--tw-u)); }
+/* the minimap opens the full map (click / tap; Tab) */
+.gm-map { pointer-events: auto; cursor: pointer; }
+.gm-full { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; background: rgba(4, 10, 16, 0.74);
+	opacity: 0; visibility: hidden; transition: opacity var(--tw-med) var(--tw-ease), visibility 0s linear var(--tw-med); pointer-events: auto; }
+.gm-full.is-open { opacity: 1; visibility: visible; transition: opacity var(--tw-med) var(--tw-ease); }
+.gm-full-map { position: relative; width: min(88vmin, 920px); aspect-ratio: 1; border-radius: calc(18 * var(--tw-u)); overflow: hidden;
+	box-shadow: 0 12px 48px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.08); background: #0b2c48; }
+.gm-full-map canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gm-full-title { position: absolute; left: 50%; top: calc(14 * var(--tw-u)); transform: translateX(-50%); font: 600 var(--tw-fs-sm) var(--tw-font);
+	letter-spacing: 0.3em; color: rgba(255,255,255,0.92); text-shadow: 0 1px 3px rgba(0,0,0,0.7); white-space: nowrap; }
+.gm-full-hint { position: absolute; left: 50%; bottom: calc(12 * var(--tw-u)); transform: translateX(-50%); font: 500 var(--tw-fs-xs) var(--tw-font);
+	color: rgba(255,255,255,0.7); text-shadow: 0 1px 2px rgba(0,0,0,0.7); white-space: nowrap; }
+.gm-fm { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: calc(5 * var(--tw-u)); transform: translate(-11px, -50%); white-space: nowrap; }
+.gm-fm > i { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #0b1418; box-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.85); }
+.gm-fm > i svg { width: 64%; height: 64%; }
+.gm-fm > span { font: 600 var(--tw-fs-xs) var(--tw-font); color: #fff; padding: 2px 7px; border-radius: 9px; background: rgba(6, 16, 24, 0.62); }
+.gm-fm.is-home > i { background: var(--tw-sun); } .gm-fm.is-view > i { background: #c9e6a0; } .gm-fm.is-hut > i { background: #f2c48a; }
+.gm-fm.is-jetty > i { background: var(--tw-aqua); } .gm-fm.is-secret > i { background: #8fd18a; } .gm-fm.is-cabin > i { background: #d9a86a; }
+.gm-fm.is-boat > i, .gm-fm.is-pier > i { background: #f2efe6; }
+.gm-fm-me { position: absolute; left: 0; top: 0; width: 26px; height: 26px; margin: -13px 0 0 -13px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
 @media (max-width: 640px), (max-height: 500px) { html.has-touch .gm-map { top: var(--tw-edge); left: var(--tw-edge); right: auto; width: calc(104 * var(--tw-u)); height: calc(104 * var(--tw-u)); } }
 `;
 
@@ -112,6 +145,9 @@ export class Minimap {
 		this.canvas = this.el.querySelector( 'canvas' );
 		this.marks = this.el.querySelector( '.gm-map-marks' );
 		parent.append( this.el );
+		this.el.addEventListener( 'click', () => this.toggleFull( true ) );
+		this.parent = parent;
+		this.full = null;
 
 		const mk = ( kind, icon ) => {
 
@@ -122,7 +158,6 @@ export class Minimap {
 		};
 
 		// fixed places (world/Places.js)
-		const at = ( p ) => () => ( { x: p.x, z: p.z } );
 		this.markers = [
 			{ id: 'home', ...mk( 'home', ICON.home ), pos: at( PLACES.house ) },
 			{ id: 'view', ...mk( 'view', ICON.view ), pos: at( PLACES.lookout ) },
@@ -300,8 +335,89 @@ export class Minimap {
 
 	}
 
+	// ---- the full map: the whole island, north up, every place named, you and the boat on it
+	toggleFull( open = ! ( this.full && this.full.open ) ) {
+
+		if ( ! this.full ) this._buildFull();
+		const F = this.full;
+		F.open = open;
+		F.el.classList.toggle( 'is-open', open );
+		if ( open ) {
+
+			// the bake may have finished since the last time
+			F.ctx.drawImage( this.canvas, ( FX0 - X0 ) * PPM, ( FZ0 - Z0 ) * PPM, FEXT * PPM, FEXT * PPM, 0, 0, F.canvas.width, F.canvas.height );
+			if ( document.pointerLockElement ) document.exitPointerLock?.();
+
+		}
+
+	}
+
+	_buildFull() {
+
+		const el = h( 'div', 'gm-full tw-interactive', `<div class="gm-full-map"><canvas width="900" height="900"></canvas><div class="gm-full-title">VASGK ISLAND</div>
+			<div class="gm-full-hint">Tab, Esc or click to close</div>
+			<svg class="gm-fm-me" viewBox="0 0 24 24"><path d="M12 2 20 21 12 16.5 4 21Z" fill="#fff" stroke="#0b1418" stroke-width="1.4" stroke-linejoin="round"/></svg></div>` );
+		el.setAttribute( 'role', 'dialog' );
+		el.setAttribute( 'aria-label', 'Map of the island' );
+		const map = el.querySelector( '.gm-full-map' );
+		const canvas = el.querySelector( 'canvas' );
+		const marks = [];
+		const pct = ( x, z ) => [ ( x - FX0 ) / FEXT * 100, ( z - FZ0 ) / FEXT * 100 ];
+		for ( const [ kind, icon, name, pos ] of FULL_PLACES ) {
+
+			const m = h( 'div', 'gm-fm is-' + kind, `<i>${ ICON[ icon ] }</i><span>${ name }</span>` );
+			map.append( m );
+			marks.push( { el: m, pos } );
+
+		}
+
+		const boat = h( 'div', 'gm-fm is-boat', `<i>${ ICON.boat }</i><span>Boat</span>` );
+		map.append( boat );
+		el.addEventListener( 'click', () => this.toggleFull( false ) );
+		window.addEventListener( 'keydown', ( e ) => {
+
+			if ( e.code === 'Escape' && this.full.open ) this.toggleFull( false );
+
+		} );
+		document.body.append( el );
+		this.full = { el, map, canvas, ctx: canvas.getContext( '2d' ), marks, boat, me: el.querySelector( '.gm-fm-me' ), open: false, pct };
+		for ( const m of marks ) {
+
+			const p = m.pos();
+			const [ l, t ] = pct( p.x, p.z );
+			m.el.style.left = l + '%';
+			m.el.style.top = t + '%';
+
+		}
+
+	}
+
+	_updateFull() {
+
+		const F = this.full;
+		if ( ! F || ! F.open ) return;
+		const app = this.app, cam = app.camera;
+		const e = cam.matrixWorld.elements;
+		const [ l, t ] = F.pct( cam.position.x, cam.position.z );
+		F.me.style.left = l + '%';
+		F.me.style.top = t + '%';
+		// the arrow points up (north) at rotate(0): turn it to the view's heading (forward = -z column)
+		F.me.style.transform = `rotate(${ Math.atan2( - e[ 8 ], e[ 10 ] ) }rad)`;
+		const b = app.boatCtl;
+		if ( b ) {
+
+			const [ bl, bt ] = F.pct( b.position.x, b.position.z );
+			F.boat.style.left = bl + '%';
+			F.boat.style.top = bt + '%';
+
+		}
+
+	}
+
 	// ---- per frame
 	update( dt ) {
+
+		this._updateFull();
 
 		this._bakeStep();
 		const app = this.app, cam = app.camera, p = app.player;

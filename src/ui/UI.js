@@ -2172,6 +2172,7 @@ export class UI {
 						<h3>Interact</h3>
 						${ row( k( 'E' ), 'Interact<small>Board, helm, step ashore</small>' ) }
 						${ row( k( 'V' ), 'Boat camera<small>1st / 3rd person</small>' ) }
+						${ row( k( 'Tab' ), 'Map<small>Or click the minimap</small>' ) }
 						${ row( k( 'F' ), 'Free camera' ) }
 						${ row( k( 'T' ), 'Pause time' ) }
 						${ row( k( 'L' ), 'Flashlight' ) }
