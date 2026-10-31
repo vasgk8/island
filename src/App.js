@@ -355,6 +355,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.audio = qs.has( 'noAudio' ) ? null : new SoundScape();
 		if ( this.touch && this.audio ) this.touch.root.addEventListener( 'pointerdown', () => this.audio.resume() );
 		this.player.audio = this.audio;
+		this.player.onMoored = ( dock ) => this.ui && this.ui.ui.toast( `Moored at ${ dock.name }` );
 		this.boatCtl.onSlam = ( s ) => this.audio && this.audio.hullSlap( s );
 		engine.domElement.addEventListener( 'click', () => {
 

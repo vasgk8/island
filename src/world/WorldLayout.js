@@ -22,6 +22,12 @@ export const WORLD = {
 
 	// Where the boat is moored: east side of the pier head, bow pointing south.
 	boatDock: { position: new THREE.Vector3( 64.5, 0, 36.5 ), heading: 0 },
+	// Where the boat ties up when you leave the helm close by and slow: the pier, and alongside the end
+	// of the east-beach jetty (Places.jetty), bow out to sea
+	moorings: [
+		{ name: 'the pier', position: new THREE.Vector3( 64.5, 0, 36.5 ), heading: 0 },
+		{ name: 'the jetty', position: new THREE.Vector3( 314, 0, - 197.4 ), heading: Math.PI / 2 },
+	],
 
 	village: { center: new THREE.Vector3( 40, 0, - 118 ), radius: 95 },
 

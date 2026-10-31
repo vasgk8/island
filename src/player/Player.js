@@ -525,12 +525,16 @@ export class Player {
 		// the exit point closest to something walkable (pier deck / sand)
 		let best = side ? null : this.ashoreTarget();
 
-		const dock = WORLD.boatDock.position;
-		if ( b.position.distanceTo( dock ) < 14 && b.speed < 1.5 ) {
+		// tie up at the pier or the jetty when you leave the helm close by and slow (WORLD.moorings)
+		const dock = WORLD.moorings.find( ( m ) => b.position.distanceTo( m.position ) < 14 );
+		if ( dock && b.speed < 1.5 ) {
 
 			b.moored = true;
-			b.mooring.anchor.set( b.position.x, 0, b.position.z );
-			b.mooring.heading = b.getYaw();
+			// close to the berth: the lines pull it in alongside; further out it ties up where it is
+			const berth = b.position.distanceTo( dock.position ) < 8;
+			b.mooring.anchor.set( berth ? dock.position.x : b.position.x, 0, berth ? dock.position.z : b.position.z );
+			b.mooring.heading = berth ? dock.heading : b.getYaw();
+			if ( wasDriving && this.onMoored ) this.onMoored( dock );
 
 		}
 
