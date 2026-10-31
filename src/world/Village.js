@@ -13,7 +13,7 @@ import { G } from '../engine/render/Frame.js';
 import { InstancedProps, Rand, lin } from './Props.js';
 import { PASTELS, TRIMS, ROOFS, CURTAINS } from './village/Palette.js';
 import { buildPlaza, buildBeachProps, buildVillageProps } from './village/VillageProps.js';
-import { buildLandmarks } from './village/Landmarks.js';
+import { buildLandmarks, buildTrailSteps } from './village/Landmarks.js';
 import { makeDoor, buildDoorMeshes, updateDoors } from './village/Doors.js';
 
 // The settlement by the bay: timber pier with a T-head and the island's name sign, a boathouse,
@@ -118,6 +118,7 @@ export class Village {
 		buildBeachProps( this, ctx( this.harbor ) );
 		buildVillageProps( this, ctx( this.town ) );
 		buildLandmarks( this, ctx( this.harbor ) );
+		buildTrailSteps( this, ctx( this.town ) );
 		if ( HIDDEN_HOME.F !== undefined ) {
 
 			this.hiddenHome = buildHiddenHome( ctx( this.town ) );

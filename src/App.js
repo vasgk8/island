@@ -233,6 +233,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		// flashlight (L): nearest few packed into one small uniform array each frame
 		this.localLights = new LocalLights();
 		addVillageLights( this.localLights, this.village );
+		this.localLights.setRooms( this.village.interiors );
 		addBoatLights( this.localLights, this.boat );
 		// rough, large or heavily overdrawn surfaces (ground, rocks, debris, foliage) take the local
 		// lights as Lambert only; the village, pier and boat get the full BRDF (glints on wet wood, metal)
