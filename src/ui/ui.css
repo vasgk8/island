@@ -73,9 +73,10 @@ body {
 }
 
 /* ── loader ────────────────────────────────────────────────────────────── */
-/* Title screen while the island builds and the shaders compile: just the name, centred on a dusk-sea
-   gradient, breathing gently (a compositor animation, so it keeps moving while the main thread is
-   blocked compiling pipelines). The status line stays hidden unless loading fails. */
+/* Title screen while the island builds and the shaders compile: the name, centred on a dusk-sea
+   gradient and breathing gently, and a slim progress bar under it until the island has loaded. The
+   breathing and the glint on the bar are compositor animations, so they keep moving while the main
+   thread is blocked compiling pipelines. The status line stays hidden unless loading fails. */
 
 #loader {
 	position: fixed;
@@ -124,6 +125,55 @@ body {
 	animation: tw-breathe 3.2s ease-in-out infinite;
 }
 
+.loader-progress {
+	display: flex;
+	align-items: center;
+	gap: calc(12 * var(--tw-u));
+	width: min(440px, 72vw);
+	margin-top: calc(14 * var(--tw-u));
+}
+
+.loader-bar {
+	position: relative;
+	flex: 1;
+	height: 4px;
+	border-radius: 999px;
+	overflow: hidden;
+	background: rgba(255, 255, 255, 0.12);
+}
+
+.loader-fill {
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: linear-gradient(90deg, #ffd7a8, #8fe3d8);
+	transform-origin: 0 50%;
+	transform: scaleX(0.02);
+}
+
+/* a soft shine sliding along the bar: shows it is alive even while a stage blocks the main thread */
+.loader-glint {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 22%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+	animation: tw-glint 1.8s ease-in-out infinite;
+}
+
+.loader-pct {
+	min-width: 3.2em;
+	text-align: right;
+	font: 500 calc(12 * var(--tw-u)) var(--tw-mono, ui-monospace, monospace);
+	font-variant-numeric: tabular-nums;
+	color: rgba(238, 244, 247, 0.7);
+}
+
+#loader.tw-error .loader-progress {
+	display: none;
+}
+
 .loader-status {
 	display: none;
 	margin: 0;
@@ -140,6 +190,11 @@ body {
 
 #loader.tw-error .loader-title {
 	animation: none;
+}
+
+@keyframes tw-glint {
+	from { transform: translateX(-100%); }
+	to { transform: translateX(560%); }
 }
 
 @keyframes tw-breathe {
@@ -2346,6 +2401,10 @@ body {
 
 	.loader-title {
 		animation: none !important;
+	}
+
+	.loader-glint {
+		display: none;
 	}
 
 }

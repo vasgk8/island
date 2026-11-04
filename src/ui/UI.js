@@ -3348,10 +3348,10 @@ export class UI {
 		const ld = this._ld = {
 			from: 0, until: 0.05, shown: 0, stageT: performance.now(), tau: 6000, detail: - 1, status: '',
 			t0: performance.now(), stopped: false,
-			fill: q( '.loader-fill' ), pct: q( '.loader-pct' ), time: q( '.loader-time' ), statusEl: q( '.loader-status' ),
+			fill: q( '.loader-fill' ), bar: q( '.loader-bar' ), pct: q( '.loader-pct' ), time: q( '.loader-time' ), statusEl: q( '.loader-status' ),
 		};
-		// eased progress while scripts run (the loader itself shows only the name; the bar, the percentage
-		// and the clock are painted when a page has them, e.g. a custom loader)
+		// eased bar and percentage while scripts run (the CSS glint keeps moving when they don't); the clock
+		// is painted when a page has one
 		const tick = () => {
 
 			if ( ld.stopped ) return;
@@ -3378,7 +3378,14 @@ export class UI {
 		// ease toward the goal; a jump after a blocked stretch settles in ~0.3 s instead of snapping
 		ld.shown += ( Math.max( goal, ld.shown ) - ld.shown ) * ( dt > 0 ? 1 - Math.exp( - dt * 9 ) : 0 );
 		if ( ld.fill ) ld.fill.style.transform = `scaleX(${ Math.max( 0.02, ld.shown ).toFixed( 4 ) })`;
-		if ( ld.pct ) ld.pct.textContent = Math.floor( ld.shown * 100 ) + '%';
+		const pct = Math.floor( ld.shown * 100 );
+		if ( ld.pct ) ld.pct.textContent = pct + '%';
+		if ( ld.bar && ld.bar._pct !== pct ) {
+
+			ld.bar._pct = pct;
+			ld.bar.setAttribute( 'aria-valuenow', String( pct ) );
+
+		}
 		if ( ld.time ) {
 
 			const s = Math.floor( ( now - ld.t0 ) / 1000 );
