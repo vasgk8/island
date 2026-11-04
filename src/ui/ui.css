@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Tidewater UI
+   VASGK ISLAND UI
    Dark translucent glass over the ocean. Aqua is the interactive accent,
    the warm sun tone marks time, light and "modified" state.
    Every metric scales with --tw-u (≈1px at 720p, 1.25px at 1440p).
@@ -73,20 +73,25 @@ body {
 }
 
 /* ── loader ────────────────────────────────────────────────────────────── */
-/* Title screen while the island builds and the shaders compile: full-bleed key art with a slow
-   drift, the wordmark bottom left, a progress panel and rotating tips. Everything that moves by
-   itself is a compositor animation (transform / opacity), so it keeps moving while the main thread
-   is blocked compiling pipelines. */
+/* Title screen while the island builds and the shaders compile: the name, centred on a dusk-sea
+   gradient and breathing gently, and a slim progress bar under it until the island has loaded. The
+   breathing and the glint on the bar are compositor animations, so they keep moving while the main
+   thread is blocked compiling pipelines. The status line stays hidden unless loading fails. */
 
 #loader {
 	position: fixed;
 	inset: 0;
 	z-index: 1000;
+	display: grid;
+	place-items: center;
 	overflow: hidden;
 	color: var(--tw-ink);
 	font-family: var(--tw-font);
 	-webkit-font-smoothing: antialiased;
-	background: #05090d;
+	background:
+		radial-gradient(120% 60% at 50% 100%, rgba(255, 170, 110, 0.16) 0%, transparent 60%),
+		radial-gradient(80% 50% at 50% 55%, rgba(60, 150, 170, 0.14) 0%, transparent 70%),
+		linear-gradient(180deg, #04070c 0%, #071421 55%, #0b2232 100%);
 	transition: opacity 900ms var(--tw-ease), visibility 0s linear 900ms;
 }
 
@@ -96,254 +101,95 @@ body {
 	pointer-events: none;
 }
 
-.loader-art {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	object-position: 60% 50%;
-	opacity: 0;
-	transform: scale(1.06);
-	transform-origin: 62% 55%;
-	transition: opacity 1400ms var(--tw-ease);
-	animation: tw-kenburns 48s var(--tw-ease-io) infinite alternate;
-	will-change: transform;
-}
-
-.loader-art.is-in {
-	opacity: 1;
-}
-
-#loader.tw-hidden .loader-art {
-	transform: scale(1.14);
-	transition: opacity 900ms var(--tw-ease), transform 900ms var(--tw-ease);
-}
-
-/* legibility: dark at the bottom and the left where the text sits, the sky left open */
-.loader-scrim {
-	position: absolute;
-	inset: 0;
-	background:
-		linear-gradient(0deg, rgba(3, 7, 11, 0.92) 0%, rgba(3, 7, 11, 0.62) 26%, rgba(3, 7, 11, 0.12) 54%, transparent 70%),
-		linear-gradient(90deg, rgba(3, 7, 11, 0.55) 0%, rgba(3, 7, 11, 0.15) 45%, transparent 70%),
-		radial-gradient(140% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
-	pointer-events: none;
-}
-
 .loader-inner {
-	position: absolute;
-	left: clamp(20px, 6vw, 112px);
-	right: clamp(20px, 6vw, 112px);
-	bottom: clamp(24px, 7vh, 96px);
-	display: flex;
-	flex-direction: column;
-	gap: clamp(20px, 3.2vh, 40px);
-	max-width: 1320px;
+	display: grid;
+	justify-items: center;
+	gap: calc(18 * var(--tw-u));
+	width: min(92vw, 1100px);
 	container-type: inline-size;
 }
 
-.loader-kicker {
-	margin: 0 0 calc(10 * var(--tw-u));
-	font-size: clamp(10px, 1vw, 13px);
-	font-weight: 600;
-	letter-spacing: 0.34em;
-	text-transform: uppercase;
-	color: var(--tw-sun);
-	text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
-}
-
 .loader-title {
-	margin: 0 -0.3em 0 -0.04em; /* optical: the trailing tracking and the T's side bearing */
-	/* always fits its column: 9 letters at 0.3em tracking are ~9.2em wide, trailing tracking included */
-	font-size: min(136px, 10.4cqi);
+	margin: 0 -0.3em 0 0; /* optical: the trailing tracking */
+	/* always fits its column: 12 characters at 0.3em tracking are ~12.3em wide, trailing tracking included */
+	font-size: min(96px, 7.6cqi);
 	white-space: nowrap;
 	font-weight: 600;
 	letter-spacing: 0.3em;
-	line-height: 0.95;
+	line-height: 1;
 	color: transparent;
 	background: linear-gradient(180deg, #ffffff 20%, #fff0dc 70%, #ffd7a8 100%);
 	-webkit-background-clip: text;
 	background-clip: text;
 	filter: drop-shadow(0 2px 18px rgba(0, 0, 0, 0.45));
+	animation: tw-breathe 3.2s ease-in-out infinite;
 }
 
-.loader-tagline {
-	margin: calc(12 * var(--tw-u)) 0 0;
-	max-width: 30em;
-	font-size: clamp(13px, 1.25vw, 16px);
-	line-height: 1.5;
-	color: var(--tw-ink-2);
-	text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
-}
-
-.loader-panel {
+.loader-progress {
 	display: flex;
-	flex-direction: column;
-	gap: calc(10 * var(--tw-u));
-	width: 100%;
-	max-width: 520px;
-}
-
-.loader-row {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: var(--tw-3);
-	font-size: clamp(12px, 1vw, 13.5px);
-}
-
-.loader-status {
-	min-width: 0;
-	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-	color: var(--tw-ink);
-	font-weight: 500;
-}
-
-.loader-meta {
-	display: flex;
-	flex: none;
+	align-items: center;
 	gap: calc(12 * var(--tw-u));
-	font-family: var(--tw-mono);
-	font-size: 0.92em;
-	font-variant-numeric: tabular-nums;
-	color: var(--tw-ink-3);
-}
-
-.loader-pct {
-	color: var(--tw-ink-2);
+	width: min(440px, 72vw);
+	margin-top: calc(14 * var(--tw-u));
 }
 
 .loader-bar {
 	position: relative;
-	height: 3px;
+	flex: 1;
+	height: 4px;
+	border-radius: 999px;
 	overflow: hidden;
-	border-radius: 3px;
-	background: rgba(200, 225, 235, 0.16);
+	background: rgba(255, 255, 255, 0.12);
 }
 
 .loader-fill {
 	position: absolute;
 	inset: 0;
 	border-radius: inherit;
-	background: linear-gradient(90deg, rgba(var(--tw-sun-rgb), 0.55), var(--tw-sun) 70%, #ffe7c8);
-	box-shadow: 0 0 10px rgba(var(--tw-sun-rgb), 0.55);
-	transform: scaleX(0.02);
+	background: linear-gradient(90deg, #ffd7a8, #8fe3d8);
 	transform-origin: 0 50%;
-	will-change: transform;
+	transform: scaleX(0.02);
 }
 
-/* a soft light running along the track: shows the page is alive even while the main thread is busy */
+/* a soft shine sliding along the bar: shows it is alive even while a stage blocks the main thread */
 .loader-glint {
 	position: absolute;
-	top: -2px;
-	bottom: -2px;
+	top: 0;
+	bottom: 0;
 	left: 0;
 	width: 22%;
-	background: linear-gradient(90deg, transparent, rgba(255, 244, 228, 0.55), transparent);
-	transform: translateX(-100%);
-	animation: tw-glint 2.6s var(--tw-ease-io) infinite;
-	pointer-events: none;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+	animation: tw-glint 1.8s ease-in-out infinite;
 }
 
-.loader-note {
-	max-height: 0;
-	overflow: hidden;
-	opacity: 0;
-	font-size: clamp(11px, 0.9vw, 12.5px);
-	line-height: 1.5;
-	color: var(--tw-ink-3);
-	transition: opacity 600ms var(--tw-ease), max-height 600ms var(--tw-ease);
+.loader-pct {
+	min-width: 3.2em;
+	text-align: right;
+	font: 500 calc(12 * var(--tw-u)) var(--tw-mono, ui-monospace, monospace);
+	font-variant-numeric: tabular-nums;
+	color: rgba(238, 244, 247, 0.7);
 }
 
-#loader.is-compiling .loader-note {
-	max-height: 4em;
-	opacity: 1;
-}
-
-#loader.tw-error .loader-status {
-	white-space: normal;
-	color: var(--tw-coral);
-}
-
-#loader.tw-error .loader-fill {
-	background: var(--tw-coral);
-	box-shadow: none;
-}
-
-#loader.tw-error .loader-glint,
-#loader.tw-error .loader-tips {
+#loader.tw-error .loader-progress {
 	display: none;
 }
 
-/* rotating tips: stacked in one grid cell (no layout shift), cross-faded by a CSS cycle so they keep
-   turning while scripts are blocked. 8 tips x 6 s. */
-.loader-tips {
-	display: flex;
-	align-items: flex-start;
-	gap: calc(12 * var(--tw-u));
-	padding-top: calc(14 * var(--tw-u));
-	border-top: 1px solid rgba(200, 225, 235, 0.14);
-}
-
-.loader-tip-label {
-	flex: none;
-	padding: calc(3 * var(--tw-u)) calc(7 * var(--tw-u));
-	border: 1px solid rgba(var(--tw-aqua-rgb), 0.45);
-	border-radius: calc(4 * var(--tw-u));
-	font-size: clamp(9.5px, 0.8vw, 11px);
-	font-weight: 600;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
-	color: var(--tw-aqua);
-}
-
-.loader-tip-list {
-	display: grid;
-	flex: 1;
-	min-width: 0;
-}
-
-.loader-tip {
-	grid-area: 1 / 1;
+.loader-status {
+	display: none;
 	margin: 0;
-	font-size: clamp(12.5px, 1.05vw, 14.5px);
-	line-height: 1.5;
-	color: var(--tw-ink-2);
-	opacity: 0;
-	animation: tw-tip 48s linear infinite;
-}
-
-.loader-tip kbd {
-	display: inline-block;
-	min-width: 1.4em;
-	padding: 0 0.4em;
-	border: 1px solid rgba(200, 225, 235, 0.35);
-	border-bottom-width: 2px;
-	border-radius: 4px;
-	font-family: var(--tw-mono);
-	font-size: 0.85em;
-	line-height: 1.45;
+	max-width: 36em;
 	text-align: center;
-	color: var(--tw-ink);
-	background: rgba(200, 225, 235, 0.08);
+	font-size: var(--tw-fs-sm);
+	line-height: 1.5;
 }
 
-/* the cycle starts 0.8 s in, so the first tip is readable at once */
-.loader-tip:nth-child(1) { animation-delay: -0.8s; }
-.loader-tip:nth-child(2) { animation-delay: 5.2s; }
-.loader-tip:nth-child(3) { animation-delay: 11.2s; }
-.loader-tip:nth-child(4) { animation-delay: 17.2s; }
-.loader-tip:nth-child(5) { animation-delay: 23.2s; }
-.loader-tip:nth-child(6) { animation-delay: 29.2s; }
-.loader-tip:nth-child(7) { animation-delay: 35.2s; }
-.loader-tip:nth-child(8) { animation-delay: 41.2s; }
+#loader.tw-error .loader-status {
+	display: block;
+	color: var(--tw-coral);
+}
 
-@keyframes tw-kenburns {
-	from { transform: scale(1.06) translate3d(0, 0, 0); }
-	to { transform: scale(1.14) translate3d(-1.6%, -0.8%, 0); }
+#loader.tw-error .loader-title {
+	animation: none;
 }
 
 @keyframes tw-glint {
@@ -351,30 +197,17 @@ body {
 	to { transform: translateX(560%); }
 }
 
-@keyframes tw-tip {
-	0% { opacity: 0; transform: translateY(4px); }
-	1.6% { opacity: 1; transform: translateY(0); }
-	11% { opacity: 1; transform: translateY(0); }
-	12.5% { opacity: 0; transform: translateY(-3px); }
-	100% { opacity: 0; transform: translateY(-3px); }
+@keyframes tw-breathe {
+	0%, 100% { opacity: 0.78; }
+	50% { opacity: 1; }
 }
 
 @media (max-width: 600px) {
 
-	.loader-art {
-		object-position: 72% 50%;
-	}
-
-	.loader-scrim {
-		background:
-			linear-gradient(0deg, rgba(3, 7, 11, 0.94) 0%, rgba(3, 7, 11, 0.7) 40%, rgba(3, 7, 11, 0.15) 66%, transparent 80%),
-			radial-gradient(140% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
-	}
-
 	.loader-title {
 		letter-spacing: 0.22em;
 		margin-right: -0.22em;
-		font-size: min(136px, 11.2cqi);
+		font-size: min(96px, 8.4cqi);
 	}
 
 }
@@ -2464,7 +2297,7 @@ body {
 
 .tw-start-title {
 	margin-right: -0.42em;
-	font-size: clamp(30px, 4.6vw, 64px);
+	font-size: clamp(24px, 3.4vw, 48px);
 	font-weight: 600;
 	letter-spacing: 0.42em;
 	line-height: 1.05;
@@ -2539,6 +2372,8 @@ body {
 
 .tw-root.is-photo .tw-panel,
 .tw-root.is-photo .tw-rail,
+.tw-root.is-photo .tw-move,
+.tw-root.is-starting .tw-move,
 .tw-root.is-photo .tw-help,
 .tw-root.is-photo .tw-menu,
 .tw-root.is-photo .tw-tip {
@@ -2564,21 +2399,12 @@ body {
 		transition-delay: 0s !important;
 	}
 
-	.loader-art {
+	.loader-title {
 		animation: none !important;
-		transform: scale(1.06) !important;
 	}
 
 	.loader-glint {
 		display: none;
-	}
-
-	.loader-tip {
-		animation: none !important;
-	}
-
-	.loader-tip:first-child {
-		opacity: 1;
 	}
 
 }
@@ -2607,4 +2433,233 @@ body {
 		width: auto;
 	}
 
+}
+
+/* Walk / Fly switch */
+.tw-move {
+	position: absolute;
+	top: var(--tw-3);
+	left: 50%;
+	display: flex;
+	gap: calc(2 * var(--tw-u));
+	padding: calc(4 * var(--tw-u));
+	border-radius: calc(12 * var(--tw-u));
+	transform: translateX(-50%);
+}
+
+.tw-move-btn {
+	min-width: calc(64 * var(--tw-u));
+	height: calc(30 * var(--tw-u));
+	padding: 0 calc(14 * var(--tw-u));
+	border-radius: calc(8 * var(--tw-u));
+	color: var(--tw-ink-2);
+	font-size: calc(12.5 * var(--tw-u));
+	font-weight: 600;
+	transition: color var(--tw-fast), background var(--tw-fast);
+}
+
+.tw-move-btn:hover {
+	color: var(--tw-ink);
+	background: var(--tw-fill-2);
+}
+
+.tw-move-btn.is-active {
+	color: var(--tw-aqua);
+	background: var(--tw-fill-2);
+}
+
+/* touch controls (src/ui/TouchControls.js): under the UI root so panels stay on top */
+.vi-touch {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	touch-action: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.vi-look {
+	position: absolute;
+	inset: 0;
+	touch-action: none;
+}
+
+.vi-stick {
+	position: absolute;
+	left: max(24px, env(safe-area-inset-left));
+	bottom: max(28px, env(safe-area-inset-bottom));
+	width: 132px;
+	height: 132px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.12);
+	border: 2px solid rgba(255, 255, 255, 0.35);
+	touch-action: none;
+}
+
+.vi-knob {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 56px;
+	height: 56px;
+	margin: -28px 0 0 -28px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.55);
+	pointer-events: none;
+}
+
+.vi-btns {
+	position: absolute;
+	right: max(20px, env(safe-area-inset-right));
+	bottom: max(28px, env(safe-area-inset-bottom));
+	display: grid;
+	grid-template-columns: repeat(2, 64px);
+	gap: 12px;
+}
+
+.vi-btn {
+	height: 64px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.14);
+	color: #fff;
+	font: 600 13px/1 var(--tw-font, system-ui, sans-serif);
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+	touch-action: none;
+}
+
+.vi-btn.is-on {
+	background: rgba(255, 255, 255, 0.4);
+}
+
+.tw-move-sep {
+	width: 1px;
+	margin: calc(6 * var(--tw-u)) calc(2 * var(--tw-u));
+	background: var(--tw-fill-2);
+}
+
+.tw-move-range {
+	width: calc(110 * var(--tw-u));
+	margin: 0 calc(4 * var(--tw-u)) 0 calc(6 * var(--tw-u));
+	accent-color: var(--tw-aqua);
+	align-self: center;
+	cursor: pointer;
+}
+
+.tw-move-clock {
+	align-self: center;
+	min-width: calc(40 * var(--tw-u));
+	padding-right: calc(8 * var(--tw-u));
+	font: 500 calc(12 * var(--tw-u)) var(--tw-mono);
+	color: var(--tw-ink-2);
+	font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+	.tw-move-range { width: calc(70 * var(--tw-u)); }
+	.tw-move-clock { display: none; }
+}
+
+/* phones: no frame-time panel on touch screens; narrow (portrait) screens keep the top row clear —
+   the top bar shrinks to Walk / Fly / Night and the brand block steps aside (the minimap takes the
+   top-left corner, see Minimap.js) */
+html.has-touch .tw-stats {
+	display: none;
+}
+
+/* landscape phones (short screens): the same clear top row, and the settings rail lifted above the
+   touch buttons */
+@media (max-height: 500px) {
+	.tw-tl { display: none; }
+	.tw-rail { top: calc(50% - 44px); }
+}
+
+@media (max-width: 640px) {
+	.tw-tl { display: none; }
+	.tw-move-range { display: none; }
+	.tw-move-sep { margin-left: 0; margin-right: 0; }
+	.tw-move-btn {
+		min-width: calc(46 * var(--tw-u));
+		padding: 0 calc(8 * var(--tw-u));
+	}
+}
+
+.vi-photo {
+	position: absolute;
+	/* left of the Jump / E buttons, clear of the settings rail on short screens */
+	right: calc(max(20px, env(safe-area-inset-right)) + 2 * 64px + 12px + 16px);
+	bottom: calc(max(28px, env(safe-area-inset-bottom)) + 64px + 12px + 8px);
+	width: 48px;
+	height: 48px;
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.14);
+	color: #fff;
+	touch-action: none;
+}
+
+.vi-photo svg {
+	width: 24px;
+	height: 24px;
+}
+
+.vi-touch.is-photo .vi-stick,
+.vi-touch.is-photo .vi-btns {
+	display: none;
+}
+
+.vi-touch.is-photo .vi-photo {
+	opacity: 0.35;
+}
+
+/* sleeping: a fade to black over everything (App.sleep) */
+.vi-fade {
+	position: fixed;
+	inset: 0;
+	z-index: 200;
+	background: #000;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.9s ease;
+}
+
+.vi-fade.is-on {
+	opacity: 1;
+}
+
+/* the thing the E prompt is about (AppUI._markTarget) */
+.vi-target {
+	position: absolute;
+	left: -11px;
+	top: -11px;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 236, 200, 0.85);
+	box-shadow: 0 0 10px rgba(255, 210, 140, 0.55), inset 0 0 6px rgba(255, 210, 140, 0.35);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease;
+}
+
+.vi-target.is-on {
+	opacity: 1;
+	animation: vi-target-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes vi-target-pulse {
+	0%, 100% { scale: 1; }
+	50% { scale: 1.18; }
+}
+
+.tw-root.is-photo .vi-target {
+	display: none;
+}
+
+/* the 2x speed toggle (X) next to Walk / Fly */
+.tw-move-boost {
+	min-width: calc(40 * var(--tw-u));
+	padding: 0 calc(10 * var(--tw-u));
 }

@@ -1,3 +1,4 @@
+import { localLightsModule } from '../materials/LocalLights.js';
 import { UniformBlock, ShaderModule, SceneLighting } from '../engine/webgpu.js';
 import { Texture } from '../engine/gpu/Texture.js';
 import { ComputeKernel } from '../engine/gpu/Compute.js';
@@ -272,7 +273,7 @@ fn hookDirectModulation( P: vec3f, N: vec3f ) -> vec3f {
 
 	const ambient = new ShaderModule( {
 		name: 'hook-ambientModulation-underwater',
-		deps: [ direct ],
+		deps: [ direct, localLightsModule ],
 		code: /* wgsl */`
 fn hookAmbientModulation( P: vec3f, N: vec3f ) -> vec3f {
 	var result = vec3f( 1.0 );
@@ -287,6 +288,10 @@ fn hookAmbientModulation( P: vec3f, N: vec3f ) -> vec3f {
 		result = mix( vec3f( 1.0 ), atten, under );
 	}
 #endif
+#endif
+#if !IS_WATER
+	// indoors: the sky's light barely reaches inside a room (LocalLights rooms)
+	result *= localLightsIndoor( P );
 #endif
 	return result;
 }

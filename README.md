@@ -1,13 +1,9 @@
-# Tidewater
+# VASGK ISLAND
 
-An island fishing game for the browser. Cast from the pier, the beach or your own boat, fight the fish,
-sell your catch to Joe at the fish stand, and spend it on better gear at Marta's chandlery. Around it is a
-real-time tropical island and ocean: swim the reef, drive the boat out to deep water, and watch a humpback
+A real-time tropical island and ocean: swim the reef, drive the boat out to deep water, and watch a humpback
 breach. It runs directly on WebGPU and WGSL with its own small rendering engine, no framework.
 
-**Play it:** https://dgreenheck.github.io/tidewater/
-
-![Fishing off the pier at golden hour](docs/screenshot.jpg)
+**Play it:** https://vasgk8.github.io/island/
 
 ![The beach in the late afternoon](docs/screenshot-beach.jpg)
 
@@ -20,17 +16,6 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
   faster because the browser caches them.
 
 ## Features
-
-**Fishing**
-- A spinning rod and reel that cast, reel and bend under load, with the bail, rotor and crank animated.
-- Bites that depend on the water (shallows, pier, reef, bay, deep water), depth and time of day, across
-  18 Caribbean species.
-- A line-tension fight: keep the tension in the green band, ease off when the fish runs.
-- A full-screen catch card with the fish's length and weight, a fish log with records, and a cooler.
-- Joe's fish stand buys your catch; Marta's chandlery sells line, reels, rods, a bigger hold, fuel, a rebuilt
-  engine, a fish finder and deck floodlights for night fishing.
-- Walk the deck and the wheelhouse while the boat drifts; the boat burns fuel.
-- A first-play guide, contextual tips and a minimap. Progress is saved in the browser.
 
 **Ocean**
 - Four-cascade FFT ocean (Tessendorf spectra) with foam, whitecaps, wind streaks and swell.
@@ -48,9 +33,16 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 - God rays, and a lens flare with occlusion.
 
 **World**
-- An island with a beach, hills, headlands and rocks.
-- A fishing village, a pier, and the vendors' stalls built from Poly Haven scans.
-- Realistic vendor characters (Microsoft Rocketbox) with skinned animation.
+- An island with a central bay beach, two long side beaches with palm groves, a forested mountain and rocks.
+- A small village (one two-storey house, sheds, a boathouse) and a pier, with scanned beach debris from Poly Haven.
+- A hidden home dug into the mountain's west flank (sod roof, arched door, a furnished room with a fireplace);
+  a faint trail leads down to it from the lookout.
+- A small timber cabin on a knoll just below the summit, up a winding trail (timber steps and a rope rail on the
+  steep bits) from the lookout; the house above the plaza (a living room downstairs, a bedroom up the stairs) and the
+  two beach huts are furnished too, with windows you can see through. Doors open and close with a creak, you can sit
+  at tables, sleep until morning, fires crackle in the hearths and smoke rises from the chimneys; rooms are lit by
+  their lamps (dim daylight indoors) and sound like rooms.
+- A minimap and a full-screen map (Tab) with every place named; the boat moors at the pier or the east-beach jetty.
 - A coral reef with fish.
 - Palms, bananas, monstera, elephant ear, heliconia, bird of paradise, broadleaf trees, shrubs and dune
   grass, with impostors and dithered LOD fades.
@@ -80,12 +72,10 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 | Shift | Sprint / boat boost |
 | Space | Jump / swim up |
 | C | Crouch / dive |
-| E | Interact: board the boat, take or leave the helm, step ashore, trade with the fish buyer or the chandlery |
+| E | Interact: board the boat, take or leave the helm, step ashore; open and close doors, sit down, sleep until morning |
 | V | Boat camera at the helm (1st / 3rd person) |
-| R | Take out / put away the fishing rod |
-| Left mouse | Hold to wind up, release to cast · strike when a fish takes the bait · hold to reel |
-| Right mouse | Reel an empty line in |
-| I or Tab | Cooler / fish hold and the fish log |
+| X | Twice as fast, walking or flying (on / off; also the 2× button at the top) |
+| Tab | Map of the island (or click / tap the minimap) |
 | F | Free camera |
 | L | Flashlight |
 | T | Pause time |
@@ -94,15 +84,9 @@ breach. It runs directly on WebGPU and WGSL with its own small rendering engine,
 | P | Photo mode |
 | F1 or ? | All controls |
 
-### Fishing
-
-Walk the deck of the boat while it drifts, or fish from the pier and the beach. Cast, wait for the bobber
-to dip and strike when it's pulled under, then play the fish: keep the line tension in the green band,
-ease off when it runs. Different water holds different fish (the shallows, the pier, the reef, the bay and
-deep water offshore), and some bite best at dawn, dusk or night. Sell your catch to Joe at the fish stand
-on the beach by the pier, and spend it at Marta's chandlery by the boathouse: stronger line, a faster reel,
-a longer rod, a bigger fish hold, a larger fuel tank, a rebuilt engine, a fish finder and deck floodlights for
-night fishing. The boat burns diesel at the helm; fill up at the chandlery. Progress is saved in the browser.
+The Walk / Fly and Day / Night buttons at the top of the screen are clickable (press Esc first to free the mouse).
+On touch screens a movement stick, drag-to-look and Jump / E / Run / Dive buttons appear automatically (or add
+`?touch` to the URL).
 
 The settings panel (H) exposes the sea state, time of day, sun azimuth, clouds, haze, post-processing and
 more.
@@ -129,13 +113,16 @@ npm run dev      # http://127.0.0.1:5189
 npm run build    # static build in dist/
 ```
 
-Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.yml`.
+Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.yml`. Missing pages get `public/404.html` (a
+"drifted out to sea" page with a link back to the island) on GitHub Pages and Netlify alike. Every pull request is built by
+`.github/workflows/preview.yml`: download the **site-preview** artifact from the PR's check run, unzip it and run
+`npx serve <folder>` to try the change before merging. The same run checks the world (`npm run test:world`, no GPU) and
+attaches **building-snapshots**: stand-in renders of every building, inside and out (`npm run snapshots` locally).
 
 ## Project layout
 
 | Folder | Contents |
 |---|---|
-| `src/game/` | The fishing game: rod, bites, the fight, catch card, cooler and log, vendors and stalls, guide, minimap, HUD |
 | `src/engine/` | The rendering engine: math, scene graph and geometry, GPU resources, WGSL shader composition, materials, lighting and shadows |
 | `src/ocean/` | FFT ocean, water surface and material, shore waves, breakers, swash, wake, caustics, underwater lighting |
 | `src/sky/` | Atmosphere, clouds, sky and environment |
@@ -145,11 +132,10 @@ Every push to `main` deploys to GitHub Pages through `.github/workflows/deploy.y
 | `src/player/` | Walking, swimming, the boat and the free camera |
 | `src/audio/` | The sample-based soundscape |
 | `src/ui/` | Settings panel, loading screen and HUD |
-| `tools/` | Scripts that fetch and convert the characters, stall props and fishing sounds |
-| `test/` | Headless engine smoke test and game-logic tests (`npm test`), and HUD / loader dev pages |
+| `test/` | Headless engine smoke test (`npm test`) and loader dev pages |
 
 ## Credits and license
 
 The code is released under the MIT license; see [LICENSE](LICENSE). Third-party assets (CC0 audio from
-Freesound, CC0 scans from Poly Haven, MIT characters from Microsoft Rocketbox, OFL / Apache fonts) and
+Freesound, CC0 scans from Poly Haven, OFL / Apache fonts) and
 technique references are listed in [CREDITS.md](CREDITS.md).

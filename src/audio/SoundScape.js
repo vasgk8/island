@@ -46,6 +46,37 @@ const smooth = ( a, b, x ) => {
 };
 
 const dB = ( d ) => Math.pow( 10, d / 20 );
+
+// white noise (mono) for the fire
+function noiseBuffer( c, seconds ) {
+
+	const b = c.createBuffer( 1, Math.round( c.sampleRate * seconds ), c.sampleRate );
+	const d = b.getChannelData( 0 );
+	for ( let i = 0; i < d.length; i ++ ) d[ i ] = Math.random() * 2 - 1;
+	return b;
+
+}
+
+// a small room's echo: stereo noise decaying exponentially (decay = time constant, s)
+function roomImpulse( c, seconds, decay ) {
+
+	const n = Math.round( c.sampleRate * seconds );
+	const b = c.createBuffer( 2, n, c.sampleRate );
+	for ( let ch = 0; ch < 2; ch ++ ) {
+
+		const d = b.getChannelData( ch );
+		for ( let i = 0; i < n; i ++ ) {
+
+			const t = i / c.sampleRate;
+			d[ i ] = ( Math.random() * 2 - 1 ) * Math.exp( - t / decay ) * ( t < 0.004 ? t / 0.004 : 1 ) * 0.5;
+
+		}
+
+	}
+
+	return b;
+
+}
 const MONO = dB( - 3 ); // a mono file plays on both channels: +3 dB against its (mono) measured loudness
 
 // Target loudness (LUFS, momentary) of each sound in its reference situation.
@@ -84,22 +115,7 @@ export const MIX = {
 	whaleSplash: - 11, // breach re-entry, at 12 m
 	whaleDrip: - 30, // water sheeting off the raised flukes, at 8 m
 	whaleFluke: - 22, // the flukes slipping under, at 10 m
-	// fishing: the rod and reel are in your hands (close, a little to the right), the bobber out on the water
-	rodSwish: - 30, // a full-power cast whooshing past (weaker casts quieter)
-	bail: - 40, // the bail wire flipping open / snapping shut
-	lineOut: - 38, // line peeling off the spool as the cast flies out
-	plop: - 30, // the bobber landing, at 4 m (falls off with distance)
-	reelWind: - 36, // cranking steadily
-	reelDrag: - 29, // the drag screaming under a fast run
-	lineStrain: - 44, // line creaking at the breaking point
-	lineSnap: - 24, // the line parting
-	fishSplash: - 24, // a hooked fish thrashing at the surface, at 6 m
-	fishFlop: - 32, // the landed fish flapping on the line in front of you
-	coins: - 30, // paid at the stand
 };
-
-// the fishing sounds (loaded when the rod comes out)
-const FISHING = [ 'reel_wind', 'reel_drag', 'line_strain', 'rod_swish', 'bail_click', 'line_out', 'plop', 'line_snap', 'fish_splash', 'fish_flop' ];
 
 // forest bird sprite: slices per source recording (a singer sings from one of them)
 const FOREST = [ [ 0, 1, 2, 3, 4, 5, 6 ], [ 7, 8, 9, 10, 11, 12 ] ];
@@ -114,7 +130,7 @@ const STEP = {
 };
 
 // max simultaneous one-shot voices per category (oldest is faded out beyond this)
-const LIMITS = { step: 3, swim: 2, splash: 3, trans: 2, hull: 3, gull: 2, crash: 7, wash: 5, back: 5, bird: 4, tern: 2, whale: 4, rod: 4, fish: 3, coin: 1 };
+const LIMITS = { step: 3, swim: 2, splash: 3, trans: 2, hull: 3, gull: 2, crash: 7, wash: 5, back: 5, bird: 4, tern: 2, whale: 4 };
 
 // loaded at resume(); everything else on first use
 const CORE = [ 'surf_crash', 'surf_wash', 'surf_backwash', 'surf_far', 'wind', 'palms', 'step_sand', 'step_wetsand', 'step_wood', 'step_water', 'step_grass', 'splash', 'swim' ];
@@ -275,7 +291,7 @@ export class SoundScape {
 			this._life( step );
 			this._birds( now, step );
 			this._whale( now, step );
-			this._reel( now );
+			this._fire( now, step );
 
 		} catch ( e ) {
 
@@ -340,100 +356,6 @@ export class SoundScape {
 		const s = clamp( num( strength, 0.5 ), 0, 1 );
 		this._shot( 'hull_slap', 'hull', this.boatSum, MIX.hullSlap - ( 1 - s ) * 10, 0.85 + Math.random() * 0.2 );
 		if ( s > 0.45 ) this._shot( 'splash', 'hull', this.boatSum, MIX.spray - ( 1 - s ) * 6, 1.15 + Math.random() * 0.2 );
-
-	}
-
-	// ------------------------------------------------------------------ fishing (src/game)
-
-	// the rod came out: load its sounds
-	rodReady() {
-
-		for ( const n of FISHING ) this._want( n );
-
-	}
-
-	// the cast: the rod whooshing through the air (power 0..1)
-	whoosh( power = 1 ) {
-
-		const p = clamp( num( power, 1 ), 0, 1 );
-		this._shot( 'rod_swish', 'rod', this.rod, MIX.rodSwish - ( 1 - p ) * 9, 0.9 + p * 0.2 + Math.random() * 0.06 );
-
-	}
-
-	// the bail wire: flipped open for the cast, snapped shut when reeling starts
-	bail( open ) {
-
-		this._shot( 'bail_click', 'rod', this.rod, MIX.bail + ( open ? 0 : 2 ), open ? 1.08 + Math.random() * 0.06 : 0.92 + Math.random() * 0.06 );
-
-	}
-
-	// line paying out off the spool as the bobber flies (power 0..1: farther casts run longer)
-	lineOut( power = 1 ) {
-
-		const p = clamp( num( power, 1 ), 0, 1 );
-		this._shot( 'line_out', 'rod', this.rod, MIX.lineOut - ( 1 - p ) * 6, 1.25 - p * 0.35 );
-
-	}
-
-	// the bobber landing on the water at p ({ x, y, z })
-	plop( p ) {
-
-		if ( ! p ) return;
-		this._shotAt( 'plop', 'fish', p.x, p.y, p.z, MIX.plop, 0.95 + Math.random() * 0.15, 0, 4, 1 );
-
-	}
-
-	// a hooked fish thrashing at p (strength 0..1)
-	fishSplash( p, strength = 0.5 ) {
-
-		if ( ! p ) return;
-		const s = clamp( num( strength, 0.5 ), 0, 1 );
-		this._shotAt( 'fish_splash', 'fish', p.x, p.y, p.z, MIX.fishSplash - ( 1 - s ) * 10, 0.9 + Math.random() * 0.2 + ( 1 - s ) * 0.15, 0, 6, 1 );
-
-	}
-
-	// the landed fish flapping on the line in front of you
-	fishFlop() {
-
-		this._shot( 'fish_flop', 'rod', this.near, MIX.fishFlop, 0.9 + Math.random() * 0.2 );
-
-	}
-
-	lineSnap() {
-
-		this._shot( 'line_snap', 'rod', this.rod, MIX.lineSnap, 0.95 + Math.random() * 0.1 );
-
-	}
-
-	// paid at the fish stand
-	coin() {
-
-		this._shot( 'coins', 'coin', this.near, MIX.coins, 0.97 + Math.random() * 0.06 );
-
-	}
-
-	// continuous reel sounds, every frame: crankRate (crank turns / s: the gear ticking follows it),
-	// dragSpeed (m/s of line a fish takes against the drag), tension (0..1+, the line creaks near 1)
-	rodLoop( crankRate, dragSpeed, tension ) {
-
-		const r = this._rod || ( this._rod = { crank: 0, drag: 0, tension: 0 } );
-		r.crank = clamp( num( crankRate, 0 ), 0, 3 );
-		r.drag = clamp( num( dragSpeed, 0 ), 0, 5 );
-		r.tension = clamp( num( tension, 0 ), 0, 2 );
-
-	}
-
-	_reel( now ) {
-
-		const r = this._rod;
-		if ( ! r ) return;
-		// the recorded crank ticks ~16 times a second: about 1.4 crank turns a second
-		const wind = smooth( 0.05, 0.35, r.crank );
-		if ( wind > 0 || this._beds.has( 'reel_wind' ) ) this._bed( 'reel_wind', dB( MIX.reelWind ) * wind * ( 0.8 + 0.2 * Math.min( 1, r.crank ) ) / dB( BANK.reel_wind.lufs ), now, 0.08, clamp( r.crank / 1.4, 0.45, 1.3 ) );
-		const drag = smooth( 0.05, 0.7, r.drag );
-		if ( drag > 0 || this._beds.has( 'reel_drag' ) ) this._bed( 'reel_drag', dB( MIX.reelDrag ) * drag / dB( BANK.reel_drag.lufs ), now, 0.06, clamp( 0.7 + r.drag * 0.25, 0.7, 1.25 ) );
-		const strain = smooth( 0.7, 1.0, r.tension );
-		if ( strain > 0 || this._beds.has( 'line_strain' ) ) this._bed( 'line_strain', dB( MIX.lineStrain ) * strain / dB( BANK.line_strain.lufs ), now, 0.1, 0.9 + 0.2 * strain );
 
 	}
 
@@ -513,7 +435,26 @@ export class SoundScape {
 		this.above = gain( 1, muffle1 );
 		this.under = gain( 0, this.master );
 		this.near = gain( 1, this.master );
-		this.foot = gain( 1, this.above );
+		// footsteps: through the outdoor muffle outside, dry (and into the room echo) indoors
+		this.foot = gain( 1 );
+		this.footOut = gain( 1, this.above );
+		this.footIn = gain( 0, this.near );
+		this.foot.connect( this.footOut );
+		this.foot.connect( this.footIn );
+
+		// indoors: a short room echo (convolver with a generated impulse response)
+		this.room = c.createConvolver();
+		this.room.buffer = roomImpulse( c, 0.7, 0.16 );
+		this.roomOut = gain( 0, this.master );
+		this.room.connect( this.roomOut );
+		this.footIn.connect( gain( 0.45, this.room ) );
+
+		// a fire in the hearth (procedural: a low roar and random crackles), at the nearest fireplace
+		this.firePan = panner( this.near, 1.5, 1.3 );
+		this.fireLP = lowpass( 16000, 0.6, this.firePan );
+		this.fireOut = gain( 0, this.fireLP );
+		this.fireOut.connect( gain( 0.5, this.room ) );
+		this._noise = noiseBuffer( c, 2 );
 
 		// distant surf: from the shore direction
 		this.surfPan = panner( this.above, 1, 0 );
@@ -529,17 +470,6 @@ export class SoundScape {
 		this.pierPan = panner( this.above, 3, 1.3 );
 		this.windLP = lowpass( 1400, 0.5, this.above );
 
-		// the rod and reel: held in front of you, a little to the right (the reel hangs lower right)
-		this.rodPan = c.createStereoPanner ? c.createStereoPanner() : null;
-		if ( this.rodPan ) {
-
-			this.rodPan.pan.value = 0.25;
-			this.rodPan.connect( this.above );
-
-		}
-
-		this.rod = gain( 1, this.rodPan || this.above );
-
 		// whale song: positional at the whale, its own path (open underwater, faint and dull from above)
 		this.songOut = gain( dB( - 20 ), this.master );
 		this.songLP = lowpass( 420, 0.6, this.songOut );
@@ -549,7 +479,6 @@ export class SoundScape {
 			surf_far: this.surfFar, wind: this.windLP, palms: this.above, crickets: this.above, pier_lap: this.pierPan,
 			under_reef: this.under, birds_dawn: this.above, whale_song: this.songPan,
 			boat_engine: this.engineLP, boat_rush: this.boatSum, boat_lap: this.boatSum,
-			reel_wind: this.rod, reel_drag: this.rod, line_strain: this.rod,
 		};
 
 	}
@@ -616,7 +545,7 @@ export class SoundScape {
 			src.start( now + 0.02, Math.random() * buf.duration );
 			bed = { src, gain: gn, trim: buf.numberOfChannels === 1 ? MONO : 1 };
 			this._beds.set( name, bed );
-			if ( this._dest[ name ] !== this.rod ) tau = Math.max( tau, 0.8 ); // fade in on first start (the reel follows the crank at once)
+			tau = Math.max( tau, 0.8 ); // fade in on first start
 
 		}
 
@@ -971,6 +900,9 @@ export class SoundScape {
 		e.wind = clamp( num( s.windSpeed, 7 ), 0, 40 );
 		e.day = clamp( num( s.daylight, 1 ), 0, 1 );
 		e.nearPier = !! s.nearPier;
+		e.indoor = clamp( num( s.indoor, 0 ), 0, 1 );
+		const fp = s.fire || null;
+		e.fire = fp && Number.isFinite( fp.x ) ? fp : null;
 		e.hour = typeof s.timeOfDay === 'number' && Number.isFinite( s.timeOfDay ) ? ( ( s.timeOfDay % 24 ) + 24 ) % 24 : null;
 		const b = s.boat || EMPTY, bp = b.position || EMPTY, eb = e.boat;
 		eb.active = !! b.active;
@@ -1028,10 +960,15 @@ export class SoundScape {
 		const deep = clamp( e.depth / 12, 0, 1 );
 
 		// underwater: steep low-pass on everything above the surface, the reef bed faded in
-		const f = Math.exp( lerp( Math.log( 20000 ), Math.log( lerp( 520, 260, deep ) ), u ) );
+		// indoors: the world outside comes through the walls dull and quieter, with a little room echo
+		const ind = e.indoor * ( 1 - u );
+		const f = Math.min( Math.exp( lerp( Math.log( 20000 ), Math.log( lerp( 520, 260, deep ) ), u ) ), Math.exp( lerp( Math.log( 20000 ), Math.log( 900 ), ind ) ) );
 		this._ramp( this.muffle[ 0 ].frequency, f, 0.04 );
 		this._ramp( this.muffle[ 1 ].frequency, Math.min( 20000, f * 1.4 ), 0.04 );
-		this._ramp( this.aboveOut.gain, lerp( 1, 0.4 / ( 1 + e.depth / 5 ), u ), 0.05 );
+		this._ramp( this.aboveOut.gain, lerp( 1, 0.4 / ( 1 + e.depth / 5 ), u ) * lerp( 1, 0.5, ind ), 0.05 );
+		this._ramp( this.footOut.gain, 1 - ind, 0.15 );
+		this._ramp( this.footIn.gain, ind, 0.15 );
+		this._ramp( this.roomOut.gain, ind * 0.55, 0.3 );
 		this._ramp( this.under.gain, u, 0.06 );
 		const wantUnder = u > 0 || ( ! e.onLand && e.ly < 2.5 );
 		this._bed( 'under_reef', wantUnder ? dB( MIX.reef ) * ( 0.8 + 0.3 * deep ) / dB( BANK.under_reef.lufs ) : 0, now, 0.5 );
@@ -1382,6 +1319,156 @@ export class SoundScape {
 	// ------------------------------------------------------------------ helpers
 
 	// smooth parameter ramp; skips negligible changes to keep the automation timeline short
+	// a door on its hinges at p ({ x, y, z }): a short wooden creak (stick-slip: a buzzy tone chopped
+	// at ~30 Hz, gliding), and a thud as it shuts
+	doorSound( p, opening ) {
+
+		if ( ! this.ctx || this.ctx.state !== 'running' || ! p ) return;
+		const c = this.ctx, now = c.currentTime + 0.02;
+		const out = this._oneShotOut( p, 1.2 );
+		const len = 0.55 + Math.random() * 0.2;
+		const osc = c.createOscillator();
+		osc.type = 'sawtooth';
+		const f0 = opening ? 170 + Math.random() * 40 : 240 + Math.random() * 40;
+		osc.frequency.setValueAtTime( f0, now );
+		osc.frequency.linearRampToValueAtTime( opening ? f0 * 1.45 : f0 * 0.7, now + len );
+		const bp = c.createBiquadFilter();
+		bp.type = 'bandpass';
+		bp.frequency.value = 1100;
+		bp.Q.value = 3;
+		const chop = c.createGain();
+		chop.gain.value = 0;
+		const lfo = c.createOscillator();
+		lfo.type = 'square';
+		lfo.frequency.value = 26 + Math.random() * 10;
+		const lfoG = c.createGain();
+		lfoG.gain.value = 0.5;
+		lfo.connect( lfoG ).connect( chop.gain );
+		const env = c.createGain();
+		env.gain.setValueAtTime( 0, now );
+		env.gain.linearRampToValueAtTime( 0.05, now + 0.06 );
+		env.gain.setValueAtTime( 0.05, now + len - 0.12 );
+		env.gain.linearRampToValueAtTime( 0, now + len );
+		osc.connect( bp ).connect( chop ).connect( env ).connect( out );
+		osc.start( now );
+		lfo.start( now );
+		osc.stop( now + len + 0.05 );
+		lfo.stop( now + len + 0.05 );
+		if ( ! opening ) this._thud( out, now + 0.68, 0.35 );
+
+	}
+
+	// sitting down on a stool or chair at p: a soft wooden thump
+	seatSound( p ) {
+
+		if ( ! this.ctx || this.ctx.state !== 'running' || ! p ) return;
+		this._thud( this._oneShotOut( p, 1 ), this.ctx.currentTime + 0.05, 0.22 );
+
+	}
+
+	_thud( dest, t, level ) {
+
+		const c = this.ctx;
+		const src = c.createBufferSource();
+		src.buffer = this._noise;
+		const lp = c.createBiquadFilter();
+		lp.type = 'lowpass';
+		lp.frequency.value = 260;
+		const g = c.createGain();
+		g.gain.setValueAtTime( 0, t );
+		g.gain.linearRampToValueAtTime( level, t + 0.004 );
+		g.gain.exponentialRampToValueAtTime( 0.001, t + 0.14 );
+		src.connect( lp ).connect( g ).connect( dest );
+		src.start( t, Math.random() );
+		src.stop( t + 0.2 );
+
+	}
+
+	// a positional one-shot output at p (dry, into the room echo too), cleaned up by the GC
+	_oneShotOut( p, ref ) {
+
+		const c = this.ctx;
+		const pan = this._panner( this.near, ref, 1.2 );
+		this._pos( pan, p.x, p.y, p.z );
+		const g = c.createGain();
+		g.connect( pan );
+		g.connect( this.room );
+		return g;
+
+	}
+
+	// the hearth: a looped low roar and crackles scheduled at random (about 9 a second), heard within
+	// ~25 m of the nearest fire; duller from outside the room
+	_fire( now, dt ) {
+
+		const e = this.env, fp = e.fire;
+		const d = fp ? Math.hypot( fp.x - e.lx, fp.y - e.ly, fp.z - e.lz ) : Infinity;
+		const on = d < 25 ? 1 - smooth( 18, 25, d ) : 0;
+		this._ramp( this.fireOut.gain, on, 0.4 );
+		if ( on <= 0 ) {
+
+			if ( this._fireBed && this.fireOut.gain._t === 0 && d > 40 ) {
+
+				this._fireBed.stop();
+				this._fireBed = null;
+
+			}
+
+			return;
+
+		}
+
+		this._pos( this.firePan, fp.x, fp.y, fp.z );
+		this._ramp( this.fireLP.frequency, lerp( 2200, 16000, e.indoor ), 0.3 );
+		const c = this.ctx;
+		if ( ! this._fireBed ) {
+
+			const src = c.createBufferSource();
+			src.buffer = this._noise;
+			src.loop = true;
+			const bp = c.createBiquadFilter();
+			bp.type = 'bandpass';
+			bp.frequency.value = 260;
+			bp.Q.value = 0.8;
+			const g = c.createGain();
+			g.gain.value = 0.05;
+			src.connect( bp ).connect( g ).connect( this.fireOut );
+			src.start();
+			this._fireBed = src;
+
+		}
+
+		// crackles in this step: a Poisson count, each a short burst of high-passed noise
+		let n = 0, L = Math.exp( - 9 * dt ), p = Math.random();
+		while ( p > L && n < 6 ) {
+
+			p *= Math.random();
+			n ++;
+
+		}
+
+		for ( let i = 0; i < n; i ++ ) {
+
+			const t = now + 0.02 + Math.random() * dt;
+			const src = c.createBufferSource();
+			src.buffer = this._noise;
+			src.playbackRate.value = 0.7 + Math.random() * 0.8;
+			const hp = c.createBiquadFilter();
+			hp.type = 'highpass';
+			hp.frequency.value = 1200 + Math.random() * 3000;
+			const g = c.createGain();
+			const peak = 0.06 + Math.random() * Math.random() * 0.35, len = 0.004 + Math.random() * 0.03;
+			g.gain.setValueAtTime( 0, t );
+			g.gain.linearRampToValueAtTime( peak, t + 0.001 );
+			g.gain.exponentialRampToValueAtTime( 0.0005, t + len );
+			src.connect( hp ).connect( g ).connect( this.fireOut );
+			src.start( t, Math.random() * 1.5 );
+			src.stop( t + len + 0.02 );
+
+		}
+
+	}
+
 	_ramp( param, v, tau ) {
 
 		if ( ! Number.isFinite( v ) ) return;

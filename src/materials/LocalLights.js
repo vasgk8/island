@@ -22,6 +22,8 @@ import { SceneLighting } from './SceneLighting.js';
 // LOCAL_LIGHTS_CHEAP (material.localLightsCheap) = Lambert only.
 const MAX = 8;
 const v4 = () => Array.from( { length: MAX }, () => new THREE.Vector4() );
+const MAX_ROOMS = 8;
+const v4r = () => Array.from( { length: MAX_ROOMS }, () => new THREE.Vector4() );
 const params = new UniformBlock( 'LocalLightParams', {
 	pos: [ `vec4f[${ MAX }]`, v4() ], // xyz, range^2
 	col: [ `vec4f[${ MAX }]`, v4() ], // rgb x intensity, cos(inner cone)
@@ -32,6 +34,11 @@ const params = new UniformBlock( 'LocalLightParams', {
 	flashPos: [ 'vec3f', new THREE.Vector3() ],
 	flashDir: [ 'vec3f', new THREE.Vector3( 0, 0, - 1 ) ],
 	flashCol: [ 'vec3f', new THREE.Vector3() ], // rgb x intensity
+	// rooms (interiors): roomA = centre x, z, cos yaw, sin yaw; roomB = inner half x, half z, floor y,
+	// ceiling y. Daylight from the sky barely reaches inside (localLightsIndoor)
+	roomA: [ `vec4f[${ MAX_ROOMS }]`, v4r() ],
+	roomB: [ `vec4f[${ MAX_ROOMS }]`, v4r() ],
+	roomCount: [ 'i32', 0 ],
 }, { label: 'localLights' } );
 const F = params.fields;
 const uPos = { array: F.pos.value };
@@ -55,6 +62,22 @@ export const localLightsModule = new ShaderModule( {
 	uniforms: params,
 	uniformName: 'localLights',
 	code: /* wgsl */`
+// how much sky light (ambient / environment) reaches P: 1 outdoors, ~0.25 inside a room (walls and a
+// roof overhead), easing in over the last few centimetres so the inner wall faces are dimmed too
+fn localLightsIndoor( P: vec3f ) -> f32 {
+	var k = 1.0;
+	for ( var i = 0; i < localLights.roomCount; i++ ) {
+		let a = localLights.roomA[ i ];
+		let b = localLights.roomB[ i ];
+		let d = P.xz - a.xy;
+		let lx = d.x * a.z - d.y * a.w;
+		let lz = d.x * a.w + d.y * a.z;
+		let e = min( min( b.x - abs( lx ), b.y - abs( lz ) ), min( P.y - b.z + 0.3, b.w + 0.25 - P.y ) );
+		k = min( k, 1.0 - 0.75 * smoothstep( -0.12, 0.06, e ) );
+	}
+	return k;
+}
+
 // spot profile shared by the shading, the beam and the snow: hot centre, soft edge, faint spill
 fn localLightsSpotProfile( cd: f32, cosInner: f32, cosOuter: f32 ) -> f32 {
 	let m = smoothstep( cosOuter, cosInner, cd );
@@ -137,9 +160,26 @@ export class LocalLights {
 
 	}
 
+	// the rooms whose sky light is dimmed ({ x, z, yaw, hx, hz, floorY, ceilY }: Village.interiors)
+	setRooms( rooms ) {
+
+		const n = Math.min( MAX_ROOMS, rooms.length );
+		for ( let i = 0; i < n; i ++ ) {
+
+			const r = rooms[ i ];
+			F.roomA.value[ i ].set( r.x, r.z, Math.cos( r.yaw ), Math.sin( r.yaw ) );
+			F.roomB.value[ i ].set( r.hx, r.hz, r.floorY, r.ceilY );
+
+		}
+
+		F.roomCount.value = n;
+
+	}
+
 	add( src ) {
 
 		src.phase = src.phase ?? Math.random() * 100;
+		if ( src.indoor ) this._hasIndoor = true;
 		this.sources.push( src );
 		return src;
 
@@ -190,9 +230,11 @@ export class LocalLights {
 
 		}
 
-		// lamps: on from dusk (same ramp as the lantern glass), nearest first
+		// lamps: on from dusk (same ramp as the lantern glass), nearest first; indoor lamps (s.indoor)
+		// stay lit by day too, since daylight does not reach inside
 		const on = smooth( G.night.value, 0.15, 0.75 ) * this.strength;
-		if ( on > 0.002 && this.enabled ) {
+		const onIndoor = Math.max( on, this.strength );
+		if ( ( on > 0.002 || this._hasIndoor ) && this.enabled ) {
 
 			const cp = camera.position;
 			const list = this._list;
@@ -200,6 +242,7 @@ export class LocalLights {
 			for ( const s of this.sources ) {
 
 				if ( s.enabled === false ) continue;
+				if ( on <= 0.002 && ! s.indoor ) continue;
 				if ( s.update ) s.update();
 				s.d2 = s.position.distanceToSquared( cp );
 				list.push( s );
@@ -215,7 +258,7 @@ export class LocalLights {
 				const s = list[ i ];
 				const fade = Number.isFinite( dCut ) ? smooth( Math.sqrt( s.d2 ), dCut, dCut * 0.8 ) : 1;
 				const fl2 = s.flicker ? 1 + s.flicker * Math.sin( this.time * 9 + s.phase ) * Math.sin( this.time * 5.3 + s.phase * 0.37 ) : 1;
-				const k = s.intensity * on * fade * fl2 * ( s.scale ?? 1 );
+				const k = s.intensity * ( s.indoor ? onIndoor : on ) * fade * fl2 * ( s.scale ?? 1 );
 				if ( k <= 1e-4 ) continue;
 				const r = s.range;
 				pos[ n ].set( s.position.x, s.position.y, s.position.z, r * r );
@@ -284,7 +327,7 @@ export function addVillageLights( lights, village ) {
 	for ( const l of village.getLightSources() ) {
 
 		const kind = l.kind || 'lantern';
-		const src = { position: l.position, color: l.color, intensity: l.intensity * ( K[ kind ] ?? 1.2 ), range: R[ kind ] ?? 12, kind };
+		const src = { position: l.position, color: l.color, intensity: l.intensity * ( K[ kind ] ?? 1.2 ), range: l.range ?? R[ kind ] ?? 12, kind, indoor: !! l.indoor };
 		if ( kind === 'window' ) {
 
 			// outward normal: away from the nearest building centre

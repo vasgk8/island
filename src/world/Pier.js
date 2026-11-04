@@ -34,6 +34,19 @@ export const PIER = {
 const _v = new Vector3();
 const _h = new Vector3();
 
+// stroke letters for the pier sign: polylines in a 0.6 x 1 cell (x right, y up)
+const SIGN_FONT = {
+	V: [ [ [ 0, 1 ], [ 0.3, 0 ], [ 0.6, 1 ] ] ],
+	A: [ [ [ 0, 0 ], [ 0.3, 1 ], [ 0.6, 0 ] ], [ [ 0.13, 0.4 ], [ 0.47, 0.4 ] ] ],
+	S: [ [ [ 0.6, 0.88 ], [ 0.48, 1 ], [ 0.12, 1 ], [ 0, 0.88 ], [ 0, 0.62 ], [ 0.12, 0.5 ], [ 0.48, 0.5 ], [ 0.6, 0.38 ], [ 0.6, 0.12 ], [ 0.48, 0 ], [ 0.12, 0 ], [ 0, 0.12 ] ] ],
+	G: [ [ [ 0.6, 0.88 ], [ 0.48, 1 ], [ 0.12, 1 ], [ 0, 0.88 ], [ 0, 0.12 ], [ 0.12, 0 ], [ 0.48, 0 ], [ 0.6, 0.12 ], [ 0.6, 0.45 ], [ 0.34, 0.45 ] ] ],
+	K: [ [ [ 0, 0 ], [ 0, 1 ] ], [ [ 0.6, 1 ], [ 0, 0.42 ] ], [ [ 0.2, 0.6 ], [ 0.6, 0 ] ] ],
+	I: [ [ [ 0.3, 0 ], [ 0.3, 1 ] ], [ [ 0.1, 1 ], [ 0.5, 1 ] ], [ [ 0.1, 0 ], [ 0.5, 0 ] ] ],
+	L: [ [ [ 0, 1 ], [ 0, 0 ], [ 0.6, 0 ] ] ],
+	N: [ [ [ 0, 0 ], [ 0, 1 ], [ 0.6, 0 ], [ 0.6, 1 ] ] ],
+	D: [ [ [ 0, 0 ], [ 0, 1 ], [ 0.34, 1 ], [ 0.6, 0.74 ], [ 0.6, 0.26 ], [ 0.34, 0 ], [ 0, 0 ] ] ],
+};
+
 export function buildPier( { B, terrain, colliders, rand, lights, inst, signB = null, hang = null } ) {
 
 	const X = PIER.x, DK = PIER.deck, halfW = PIER.halfW;
@@ -315,13 +328,13 @@ export function buildPier( { B, terrain, colliders, rand, lights, inst, signB = 
 
 	}
 
-	// ------------------------------------------------------------------ entrance arch with a painted fish sign
+	// ------------------------------------------------------------------ entrance arch with the island's name sign
 	{
 
 		const az = bentZ[ 0 ];
 		const by = DK + ARCH_H;
 		const wd = () => WOOD( rand.next(), 0.7, 0.6, 0 );
-		const white = lin( 0xefe9dc ), teal = lin( 0x2f8f8c ), coral = lin( 0xe07a5f );
+		const white = lin( 0xefe9dc ), teal = lin( 0x2f8f8c ), cream = lin( 0xf6efd8 );
 		B.box( 'wood', X, by, az, PIER.width + 1.1, 0.24, 0.16, { grain: 0, tint: white, data: wd() } );
 		B.box( 'wood', X, by + 0.2, az, PIER.width + 1.35, 0.06, 0.22, { grain: 0, tint: white, data: wd() } );
 		for ( const s of [ - 1, 1 ] ) {
@@ -338,24 +351,40 @@ export function buildPier( { B, terrain, colliders, rand, lights, inst, signB = 
 		S.box( 'wood', X, sy, az + 0.02, 1.9, 0.52, 0.05, { grain: 0, tint: teal, data: WOOD( rand.next(), 0.6, 0.72, 6 ) } );
 		S.box( 'wood', X, sy, az + 0.02, 1.98, 0.6, 0.03, { grain: 0, tint: white, data: wd() } );
 		for ( const s of [ - 0.7, 0.7 ] ) S.rod( 'hard', [ X + s, sy + 0.26, az + 0.02 ], [ X + s, by - 0.12, az + 0.02 ], 0.008, 0.008, { segs: 4, tint: C.iron, data: HARD( rand.next(), 0.6, 0.6, 0.5 ) } );
-		// fish silhouette (both faces)
-		for ( const f of [ 1, - 1 ] ) {
+		// painted lettering on both faces: VASGK over ISLAND (stroke letters, mirrored on the back so
+		// they read from either side)
+		const lettering = ( text, cy, size ) => {
 
-			const zf = az + 0.02 + f * 0.032;
-			const body = [];
-			for ( let i = 0; i < 14; i ++ ) {
+			const adv = size * 1.0, x0 = X - ( text.length * adv - ( adv - size * 0.6 ) ) / 2;
+			for ( const f of [ 1, - 1 ] ) {
 
-				const a = i / 14 * Math.PI * 2;
-				body.push( new Vector3( X - 0.1 + Math.cos( a ) * 0.5, sy + Math.sin( a ) * 0.17, zf ) );
+				const zf = az + 0.02 + f * 0.031;
+				for ( let i = 0; i < text.length; i ++ ) {
+
+					for ( const line of SIGN_FONT[ text[ i ] ] || [] ) {
+
+						for ( let k = 0; k < line.length - 1; k ++ ) {
+
+							const px = ( u ) => {
+
+								const x = x0 + i * adv + u * size;
+								return f > 0 ? x : 2 * X - x;
+
+							};
+							const [ u0, v0 ] = line[ k ], [ u1, v1 ] = line[ k + 1 ];
+							S.beam( 'wood', [ px( u0 ), cy + ( v0 - 0.5 ) * size, zf ], [ px( u1 ), cy + ( v1 - 0.5 ) * size, zf ], 0.008, size * 0.15, { extend: size * 0.14, tint: cream, data: WOOD( rand.next(), 0.6, 0.75, 0 ) } );
+
+						}
+
+					}
+
+				}
 
 			}
 
-			S.slab( 'wood', body, 0.01, { up: new Vector3( 0, 0, f ), uDir: new Vector3( 1, 0, 0 ), tint: coral, data: WOOD( rand.next(), 0.6, 0.75, 0 ) } );
-			S.slab( 'wood', [ new Vector3( X + 0.36, sy, zf ), new Vector3( X + 0.72, sy + 0.2, zf ), new Vector3( X + 0.66, sy, zf ), new Vector3( X + 0.72, sy - 0.2, zf ) ].slice( 0, 3 ), 0.01, { up: new Vector3( 0, 0, f ), tint: coral, data: WOOD( rand.next(), 0.6, 0.75, 0 ) } );
-			S.slab( 'wood', [ new Vector3( X + 0.36, sy, zf ), new Vector3( X + 0.66, sy, zf ), new Vector3( X + 0.72, sy - 0.2, zf ) ], 0.01, { up: new Vector3( 0, 0, f ), tint: coral, data: WOOD( rand.next(), 0.6, 0.75, 0 ) } );
-			S.cyl( 'hard', X - 0.42, sy + 0.04, zf + f * 0.006, 0.035, 0.035, 0.008, { segs: 8, rx: f * Math.PI / 2, tint: C.black, data: HARD( rand.next(), 0, 0, 0.4 ) } );
-
-		}
+		};
+		lettering( 'VASGK', sy + 0.11, 0.16 );
+		lettering( 'ISLAND', sy - 0.11, 0.16 );
 
 		// lanterns hanging from the beam next to each post
 		for ( const s of [ - 1, 1 ] ) {

@@ -390,7 +390,15 @@ export class BoatController {
 
 			const a = this.mooring.anchor;
 			const k = 5500, c = 4200;
-			const dx = a.x - this.position.x, dz = a.z - this.position.z;
+			let dx = a.x - this.position.x, dz = a.z - this.position.z;
+			// a berth a few metres off is reached at a gentle pull, not yanked into
+			const dl = Math.hypot( dx, dz );
+			if ( dl > 1.2 ) {
+
+				dx *= 1.2 / dl;
+				dz *= 1.2 / dl;
+
+			}
 			F.x += dx * k - this.velocity.x * c;
 			F.z += dz * k - this.velocity.z * c;
 			let dy = this.mooring.heading - this.getYaw();

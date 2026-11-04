@@ -81,8 +81,9 @@ function windowUnit( B, rand, cx, sillY, ww, wh, st ) {
 	B.box( 'wood', cx - ww / 2 + 0.025, sillY + wh / 2, 0.012, 0.05, wh, 0.024, { grain: 1, skip: 44, tint: trim, data: td() } );
 	B.box( 'wood', cx + ww / 2 - 0.025, sillY + wh / 2, 0.012, 0.05, wh, 0.024, { grain: 1, skip: 44, tint: trim, data: td() } );
 	B.box( 'wood', cx, sillY + wh / 2, 0.01, 0.022, wh - 0.1, 0.018, { grain: 1, skip: 44, tint: trim, data: td() } );
-	const lit = rand.chance( st.litChance ?? 0.6 ) ? 1 : 0;
-	B.part( 'glass', quad01Part( ww - 0.05, wh - 0.05 ), cx, sillY + wh / 2, 0.004, { tint: st.curtain, data: [ rand.next(), 0, lit, 0 ] } );
+	// an open window (an enterable house's ground floor) has no pane: you see in and out
+	const lit = st.open ? 0 : ( rand.chance( st.litChance ?? 0.6 ) ? 1 : 0 );
+	if ( ! st.open ) B.part( 'glass', quad01Part( ww - 0.05, wh - 0.05 ), cx, sillY + wh / 2, 0.004, { tint: st.curtain, data: [ rand.next(), 0, lit, 0 ] } );
 
 	if ( st.shutters === 'louver' || st.shutters === 'board' ) {
 
@@ -137,16 +138,17 @@ function windowUnit( B, rand, cx, sillY, ww, wh, st ) {
 
 }
 
-function doorUnit( B, rand, cx, floorY, st ) {
+function doorUnit( B, rand, cx, floorY, st, open = false ) {
 
 	const dw = 0.92, dh = 2.08, tw = 0.09;
 	const trim = st.trim, td = () => [ rand.next(), st.trimPaint, 0, st.weather ];
-	B.box( 'wood', cx, floorY + dh / 2, 0.012, dw, dh, 0.045, { grain: 1, tint: st.accent, data: [ rand.next(), st.paint, st.doorPattern ?? 3, st.weather ] } );
+	if ( ! open ) B.box( 'wood', cx, floorY + dh / 2, 0.012, dw, dh, 0.045, { grain: 1, tint: st.accent, data: [ rand.next(), st.paint, st.doorPattern ?? 3, st.weather ] } );
 	B.box( 'wood', cx - dw / 2 - tw / 2, floorY + dh / 2 + 0.02, 0.02, tw, dh + 0.04, 0.04, { grain: 1, tint: trim, data: td() } );
 	B.box( 'wood', cx + dw / 2 + tw / 2, floorY + dh / 2 + 0.02, 0.02, tw, dh + 0.04, 0.04, { grain: 1, tint: trim, data: td() } );
 	B.box( 'wood', cx, floorY + dh + 0.1, 0.024, dw + 2 * tw + 0.06, 0.14, 0.048, { grain: 0, tint: trim, data: td() } );
 	B.box( 'wood', cx, floorY + dh + 0.18, 0.045, dw + 2 * tw + 0.12, 0.025, 0.09, { grain: 0, tint: trim, data: td() } );
 	B.box( 'wood', cx, floorY + 0.015, 0.05, dw + 0.12, 0.03, 0.1, { grain: 0, data: WOOD( rand.next(), 0.7 ) } );
+	if ( open ) return;
 	if ( st.doorGlass ) {
 
 		B.box( 'wood', cx, floorY + 1.55, 0.04, 0.56, 0.5, 0.012, { grain: 0, tint: trim, data: td() } );
@@ -349,10 +351,18 @@ export function buildHouse( ctx, s ) {
 
 	// ------------------------------------------------------------- walls & trim
 	const wy = floorY + H / 2;
-	B.box( 'wood', 0, wy, d / 2 - t / 2, w, H, t, { grain: 0, tint: s.wall, data: wallData() } );
-	B.box( 'wood', 0, wy, - d / 2 + t / 2, w, H, t, { grain: 0, tint: s.wall, data: wallData() } );
-	B.box( 'wood', w / 2 - t / 2, wy, 0, t, H, d - 2 * t, { grain: 2, tint: s.wall, data: wallData() } );
-	B.box( 'wood', - w / 2 + t / 2, wy, 0, t, H, d - 2 * t, { grain: 2, tint: s.wall, data: wallData() } );
+	const doorX = s.doorX ?? 0;
+	// an enterable house (s.interior): a real doorway in the front wall (ODW half width, ODH tall)
+	const ODW = 0.5, ODH = 2.12;
+	// (an enterable house builds its walls after the windows, with openings: see openWalls below)
+	if ( ! s.interior ) {
+
+		B.box( 'wood', 0, wy, d / 2 - t / 2, w, H, t, { grain: 0, tint: s.wall, data: wallData() } );
+		B.box( 'wood', 0, wy, - d / 2 + t / 2, w, H, t, { grain: 0, tint: s.wall, data: wallData() } );
+		B.box( 'wood', w / 2 - t / 2, wy, 0, t, H, d - 2 * t, { grain: 2, tint: s.wall, data: wallData() } );
+		B.box( 'wood', - w / 2 + t / 2, wy, 0, t, H, d - 2 * t, { grain: 2, tint: s.wall, data: wallData() } );
+
+	}
 	for ( const sx of [ - 1, 1 ] ) for ( const sz of [ - 1, 1 ] ) {
 
 		B.box( 'wood', sx * ( w / 2 - 0.05 ), wy, sz * ( d / 2 - 0.05 ), 0.135, H + 0.01, 0.135, { grain: 1, tint: st.trim, data: trimData() } );
@@ -595,8 +605,8 @@ export function buildHouse( ctx, s ) {
 
 	// ------------------------------------------------------------- openings
 	const winW = s.winW ?? 0.86, winH = s.winH ?? 1.2;
-	const doorX = s.doorX ?? 0;
 	const litWindows = [];
+	const innerWindows = []; // ground-floor windows, repeated on the inside of an enterable house
 	const slots = ( L, avoid, spacing = 1.9 ) => {
 
 		const n = Math.max( 1, Math.floor( ( L - 0.9 ) / spacing ) );
@@ -635,8 +645,10 @@ export function buildHouse( ctx, s ) {
 			if ( ! wl.front && s.fewWindows && xs.length > 1 ) xs = [ xs[ Math.floor( rand.next() * xs.length ) ] ];
 			for ( const px of xs ) {
 
-				const closed = rand.chance( s.closedChance ?? 0.12 );
-				const lit = windowUnit( B, rand, px, baseY + 0.88, winW, winH, { ...st, closed, closedPattern: st.shutters === 'louver' ? 4 : 3 } );
+				const openHole = !! s.interior && ( sIdx === 0 || !! s.upstairs );
+				const closed = rand.chance( s.closedChance ?? 0.12 ) && ! openHole;
+				const lit = windowUnit( B, rand, px, baseY + 0.88, winW, winH, { ...st, closed, open: openHole, closedPattern: st.shutters === 'louver' ? 4 : 3 } );
+				if ( openHole ) innerWindows.push( { wi, px, sill: baseY + 0.88, story: sIdx } );
 				if ( lit && wl.front ) litWindows.push( B.toWorld( lit.x, lit.y, 0.35 ) );
 
 			}
@@ -645,7 +657,7 @@ export function buildHouse( ctx, s ) {
 
 		if ( wl.front ) {
 
-			doorUnit( B, rand, doorX, floorY, st );
+			doorUnit( B, rand, doorX, floorY, st, !! s.interior );
 			if ( s.lantern !== false ) {
 
 				const lw = wallLantern( B, doorX + 0.78, floorY + 1.95, 0.0, rand.next() );
@@ -660,6 +672,29 @@ export function buildHouse( ctx, s ) {
 	}
 
 	if ( litWindows.length ) lights.push( { position: litWindows[ 0 ], color: new Color( 1.0, 0.62, 0.32 ), intensity: 1.6, kind: 'window' } );
+
+	// an enterable house: the four walls built around the doorway and the ground-floor windows
+	if ( s.interior ) {
+
+		for ( let wi = 0; wi < 4; wi ++ ) {
+
+			const wl = walls[ wi ];
+			const side = wi >= 2;
+			const holes = innerWindows.filter( ( o ) => o.wi === wi ).map( ( o ) => [ o.px - winW / 2 - 0.02, o.px + winW / 2 + 0.02, o.sill, o.sill + winH ] );
+			if ( wl.front ) holes.push( [ doorX - ODW, doorX + ODW, floorY, floorY + ODH ] );
+			const half = side ? d / 2 - t : w / 2; // side walls run between the front and back walls
+			B.pushAt( wl.fx, 0, wl.fz, wl.ry );
+			for ( const [ x0, x1, y0, y1 ] of wallPieces( - half, half, floorY, yE, holes ) ) {
+
+				B.box( 'wood', ( x0 + x1 ) / 2, ( y0 + y1 ) / 2, - t / 2, x1 - x0, y1 - y0, t, { grain: side ? 2 : 0, tint: s.wall, data: wallData() } );
+
+			}
+
+			B.pop();
+
+		}
+
+	}
 
 	// ------------------------------------------------------------- porch or stoop
 	const porchPaint = s.porchPaint || null;
@@ -883,6 +918,7 @@ export function buildHouse( ctx, s ) {
 
 	}
 
+	let chimneyTop = null;
 	if ( s.chimney ) {
 
 		const sx = s.chimney;
@@ -895,6 +931,8 @@ export function buildHouse( ctx, s ) {
 		B.cyl( 'stone', cxl, top + 0.08, czl, 0.1, 0.12, 0.3, { segs: 8, tint: lin( 0xa86a4a ), data: [ rand.next(), 1, 0, 0 ] } );
 		checks.push( fr.worldPt( cxl, g - 0.3, czl ) );
 		fr.addBoxL( cxl, g + hh / 2 - 0.3, czl, 0.36, hh / 2, 0.41, { tag: 'chimney' } );
+		const cw = toW( cxl, czl );
+		chimneyTop = new Vector3( cw.x, top + 0.45, cw.z );
 
 	}
 
@@ -1015,14 +1053,222 @@ export function buildHouse( ctx, s ) {
 
 	}
 
-	// main body collider
+	// main body collider (an enterable house gets walls, a doorway and a floor instead)
 	const bodyBot = gMin - 0.3;
-	fr.addBoxL( 0, ( bodyBot + roofTop ) / 2, 0, w / 2 + 0.06, ( roofTop - bodyBot ) / 2, d / 2 + 0.06, { tag: 'house' } );
+	let interior = null;
+	if ( s.interior ) interior = buildInterior( ctx, fr, s, { w, d, t, H, floorY, yE, stories, storyH, doorX, ODW, ODH, bodyBot, roofTop, innerWindows, walls, winW, winH, st } );
+	else fr.addBoxL( 0, ( bodyBot + roofTop ) / 2, 0, w / 2 + 0.06, ( roofTop - bodyBot ) / 2, d / 2 + 0.06, { tag: 'house' } );
 
 	return {
-		floorY, roofTop,
+		floorY, roofTop, interior, chimneyTop,
 		footprint: { x, z, r: Math.hypot( w, d + Math.max( pd, annexD ) * 2 ) / 2 + 0.8, kind: 'building' },
 	};
+
+}
+
+// Rectangles covering a wall [x0, x1] x [y0, y1] minus its openings (holes: [x0, x1, y0, y1]; they
+// may sit above one another, e.g. a window on each storey): the wall is cut into columns at every hole
+// edge, and each column into the pieces between the holes that cover it.
+export function wallPieces( x0, x1, y0, y1, holes ) {
+
+	const hs = holes.map( ( [ a, b, c, e ] ) => [ Math.max( a, x0 ), Math.min( b, x1 ), Math.max( c, y0 ), Math.min( e, y1 ) ] ).filter( ( [ a, b, c, e ] ) => b > a && e > c );
+	const xs = [ ...new Set( [ x0, x1, ...hs.flatMap( ( h ) => [ h[ 0 ], h[ 1 ] ] ) ] ) ].sort( ( p, q ) => p - q );
+	const out = [];
+	for ( let i = 0; i + 1 < xs.length; i ++ ) {
+
+		const a = xs[ i ], b = xs[ i + 1 ], m = ( a + b ) / 2;
+		const inCol = hs.filter( ( h ) => h[ 0 ] < m && h[ 1 ] > m ).sort( ( p, q ) => p[ 2 ] - q[ 2 ] );
+		let y = y0;
+		for ( const h of inCol ) {
+
+			if ( h[ 2 ] > y ) out.push( [ a, b, y, h[ 2 ] ] );
+			y = Math.max( y, h[ 3 ] );
+
+		}
+
+		if ( y < y1 ) out.push( [ a, b, y, y1 ] );
+
+	}
+
+	// merge vertically aligned neighbours (same y span) into wider boxes
+	const merged = [];
+	for ( const r of out ) {
+
+		const last = merged.find( ( q ) => Math.abs( q[ 1 ] - r[ 0 ] ) < 1e-6 && Math.abs( q[ 2 ] - r[ 2 ] ) < 1e-6 && Math.abs( q[ 3 ] - r[ 3 ] ) < 1e-6 );
+		if ( last ) last[ 1 ] = r[ 1 ];
+		else merged.push( r.slice() );
+
+	}
+
+	return merged.filter( ( [ a, b, c, e ] ) => b - a > 0.005 && e - c > 0.005 );
+
+}
+
+// The inside of an enterable house (still in the house frame): plank floor, painted board lining,
+// a ceiling under the first storey, the ground-floor windows seen from inside, a hinged door, and
+// colliders for the walls (with the doorway) and the floor. Returns the room for furnishing.
+function buildInterior( ctx, fr, s, o ) {
+
+	const { B, rand } = ctx;
+	const { w, d, t, H, floorY, stories, storyH, doorX, ODW, ODH, bodyBot, roofTop, innerWindows, walls, winW, winH, st } = o;
+	const ceilY = floorY + ( stories > 1 ? storyH : H ) - 0.06;
+	const iw = w / 2 - t, idp = d / 2 - t;
+	const lineTint = s.lining || lin( 0xeee4d0 );
+	const lineData = () => [ rand.next(), 0.92, 3, 0.1 ];
+	const flY = floorY - 0.02; // floor top: a little below the porch / stoop boards
+	const hh = ceilY - flY;
+	B.pushAt( s.x, 0, s.z, s.yaw ); // (buildHouse has already left the house frame)
+
+	// floor, ceiling and the lining on the inner faces
+	B.box( 'wood', 0, flY - 0.05, 0, 2 * iw, 0.1, 2 * idp, { grain: 0, tint: lin( 0xb48a5e ), data: WOOD( rand.next(), 0.25, 0, 6 ) } );
+	// upstairs (s.upstairs on a two-storey house): a straight stair up the left wall from the front,
+	// and a stairwell in the floor above it where you would hit your head
+	const up = !! s.upstairs && stories > 1;
+	const upY = floorY + storyH; // upstairs floor top
+	const stairW = 0.92, tread = 0.26;
+	const nSteps = up ? Math.ceil( ( upY - flY ) / 0.19 ) : 0, rise = up ? ( upY - flY ) / nSteps : 0;
+	const sx0 = - iw, sx1 = - iw + stairW, sz0 = idp - 0.12, sz1 = sz0 - nSteps * tread;
+	const well = up ? [ sx0, sx1 + 0.06, sz1 - 0.06, sz0 - ( ceilY - 2.02 - flY ) / ( upY - flY ) * ( sz0 - sz1 ) ] : null;
+	const slab = up ? wallPieces( - iw, iw, - idp, idp, [ well ] ) : [ [ - iw, iw, - idp, idp ] ];
+	for ( const [ x0, x1, z0, z1 ] of slab ) {
+
+		B.box( 'wood', ( x0 + x1 ) / 2, ceilY + 0.03, ( z0 + z1 ) / 2, x1 - x0, 0.06, z1 - z0, { grain: 0, tint: up ? lin( 0xb48a5e ) : lin( 0xe8dcc4 ), data: up ? WOOD( rand.next(), 0.25, 0, 6 ) : [ rand.next(), 0.9, 6, 0.1 ] } );
+
+	}
+
+	for ( const bz of [ - idp * 0.5, idp * 0.5 ] ) {
+
+		const bx0 = up && bz > well[ 2 ] && bz < well[ 3 ] ? well[ 1 ] : - iw;
+		B.box( 'wood', ( bx0 + iw ) / 2, ceilY - 0.06, bz, iw - bx0, 0.14, 0.14, { grain: 0, tint: lin( 0x7a5a3e ), data: WOOD( rand.next(), 0.4 ) } );
+
+	}
+	const lz = idp - 0.01;
+	const xa = doorX - ODW, xb = doorX + ODW;
+	// lining in each wall's frame (the wall's inner face is at z = -t there), with the openings
+	for ( let wi = 0; wi < 4; wi ++ ) {
+
+		const wl = walls[ wi ];
+		const half = wi >= 2 ? idp : iw;
+		const holes = innerWindows.filter( ( o ) => o.wi === wi && ! o.story ).map( ( o ) => [ o.px - winW / 2 - 0.02, o.px + winW / 2 + 0.02, o.sill, o.sill + winH ] );
+		if ( wl.front ) holes.push( [ xa, xb, flY, floorY + ODH ] );
+		B.pushAt( wl.fx, 0, wl.fz, wl.ry );
+		for ( const [ x0, x1, y0, y1 ] of wallPieces( - half, half, flY, ceilY, holes ) ) {
+
+			B.box( 'wood', ( x0 + x1 ) / 2, ( y0 + y1 ) / 2, - t - 0.01, x1 - x0, y1 - y0, 0.02, { grain: wi >= 2 ? 2 : 0, tint: lineTint, data: lineData() } );
+
+		}
+
+		B.pop();
+
+	}
+	// door casing inside
+	const trim = lin( 0x8a6a48 );
+	for ( const sx of [ xa - 0.04, xb + 0.04 ] ) B.box( 'wood', sx, floorY + ODH / 2, lz - 0.02, 0.08, ODH, 0.03, { grain: 1, tint: trim, data: WOOD( rand.next(), 0.3 ) } );
+	B.box( 'wood', doorX, floorY + ODH + 0.05, lz - 0.02, 2 * ODW + 0.16, 0.1, 0.03, { grain: 0, tint: trim, data: WOOD( rand.next(), 0.3 ) } );
+
+	// the windows from inside: curtained panes, frames and sills on the lining
+	for ( const win of innerWindows ) {
+
+		const wl = walls[ win.wi ];
+		B.pushAt( wl.fx, 0, wl.fz, wl.ry );
+		const zi = - t - 0.025, cyw = win.sill + winH / 2;
+		// the reveal: boards lining the opening through the wall
+		const rv = { grain: 0, tint: lineTint, data: lineData() };
+		B.box( 'wood', win.px, win.sill - 0.01, - t / 2, winW + 0.04, 0.02, t, rv );
+		B.box( 'wood', win.px, win.sill + winH + 0.01, - t / 2, winW + 0.04, 0.02, t, rv );
+		for ( const sx of [ - 1, 1 ] ) B.box( 'wood', win.px + sx * ( winW / 2 + 0.01 ), cyw, - t / 2, 0.02, winH, t, { ...rv, grain: 1 } );
+		const fd = { grain: 0, tint: trim, data: WOOD( rand.next(), 0.3 ) };
+		B.box( 'wood', win.px, win.sill + 0.03, zi - 0.02, winW + 0.12, 0.06, 0.04, fd );
+		B.box( 'wood', win.px, win.sill + winH - 0.03, zi - 0.02, winW + 0.12, 0.06, 0.04, fd );
+		for ( const sx of [ - 1, 1 ] ) B.box( 'wood', win.px + sx * ( winW / 2 + 0.03 ), cyw, zi - 0.02, 0.06, winH, 0.04, fd );
+		B.box( 'wood', win.px, win.sill - 0.03, zi - 0.07, winW + 0.2, 0.04, 0.14, { grain: 0, tint: trim, data: WOOD( rand.next(), 0.35 ) } );
+		B.pop();
+
+	}
+
+	let upRoom = null;
+	if ( up ) {
+
+		const upCeil = floorY + H - 0.06;
+		const mid = lin( 0x8a6844 ), dark = lin( 0x5a4030 );
+		// treads, risers and the two stringers
+		for ( let i = 0; i < nSteps; i ++ ) {
+
+			const yt = flY + ( i + 1 ) * rise, zc = sz0 - ( i + 0.5 ) * tread;
+			B.box( 'wood', ( sx0 + sx1 ) / 2, yt - 0.02, zc, stairW, 0.04, tread + 0.03, { grain: 0, tint: mid, data: WOOD( rand.next(), 0.3, 0, 6 ) } );
+			B.box( 'wood', ( sx0 + sx1 ) / 2, yt - rise / 2, zc + tread / 2, stairW, rise, 0.02, { grain: 0, tint: lineTint, data: lineData() } );
+			fr.addBoxL( ( sx0 + sx1 ) / 2, yt - 0.1, zc, stairW / 2, 0.1, tread / 2 + 0.01, { walkable: true, tag: 'stairs' } );
+
+		}
+
+		for ( const xs of [ sx0 + 0.03, sx1 - 0.03 ] ) B.beam( 'wood', [ xs, flY + 0.05, sz0 + 0.05 ], [ xs, upY - 0.1, sz1 ], 0.05, 0.28, { tint: dark, data: WOOD( rand.next(), 0.4 ) } );
+		// handrail on the open side
+		B.beam( 'wood', [ sx1 - 0.03, flY + 0.95, sz0 ], [ sx1 - 0.03, upY + 0.9, sz1 ], 0.06, 0.06, { tint: dark, data: WOOD( rand.next(), 0.35 ) } );
+		for ( const [ zz, yy ] of [ [ sz0 - 0.05, flY ], [ sz1 + 0.05, upY - rise ] ] ) B.box( 'wood', sx1 - 0.03, yy + 0.5, zz, 0.07, 1.0, 0.07, { grain: 1, tint: dark, data: WOOD( rand.next(), 0.35 ) } );
+
+		// upstairs: lining with its windows, ceiling, a railing around the stairwell
+		for ( let wi = 0; wi < 4; wi ++ ) {
+
+			const wl = walls[ wi ];
+			const half = wi >= 2 ? idp : iw;
+			const holes = innerWindows.filter( ( o ) => o.wi === wi && o.story === 1 ).map( ( o ) => [ o.px - winW / 2 - 0.02, o.px + winW / 2 + 0.02, o.sill, o.sill + winH ] );
+			B.pushAt( wl.fx, 0, wl.fz, wl.ry );
+			for ( const [ x0, x1, y0, y1 ] of wallPieces( - half, half, upY, upCeil, holes ) ) {
+
+				B.box( 'wood', ( x0 + x1 ) / 2, ( y0 + y1 ) / 2, - t - 0.01, x1 - x0, y1 - y0, 0.02, { grain: wi >= 2 ? 2 : 0, tint: lineTint, data: lineData() } );
+
+			}
+
+			B.pop();
+
+		}
+
+		B.box( 'wood', 0, upCeil + 0.03, 0, 2 * iw, 0.06, 2 * idp, { grain: 0, tint: lin( 0xe8dcc4 ), data: [ rand.next(), 0.9, 6, 0.1 ] } );
+		const rails = [ [ well[ 1 ], well[ 2 ] + 0.6, well[ 1 ], well[ 3 ] ], [ well[ 0 ], well[ 3 ], well[ 1 ], well[ 3 ] ] ];
+		for ( const [ ax, az, bx, bz ] of rails ) {
+
+			B.beam( 'wood', [ ax, upY + 0.95, az ], [ bx, upY + 0.95, bz ], 0.07, 0.06, { tint: dark, data: WOOD( rand.next(), 0.35 ) } );
+			const L = Math.hypot( bx - ax, bz - az ), nb = Math.max( 2, Math.round( L / 0.14 ) );
+			for ( let k = 0; k <= nb; k ++ ) B.box( 'wood', ax + ( bx - ax ) * k / nb, upY + 0.47, az + ( bz - az ) * k / nb, 0.035, 0.94, 0.035, { grain: 1, tint: lineTint, data: lineData() } );
+			fr.addBoxL( ( ax + bx ) / 2, upY + 0.5, ( az + bz ) / 2, Math.max( 0.04, Math.abs( bx - ax ) / 2 ), 0.5, Math.max( 0.04, Math.abs( bz - az ) / 2 ), { tag: 'rail' } );
+
+		}
+
+		upRoom = { x: s.x, z: s.z, yaw: s.yaw, floorY: upY, ceilY: upCeil, hx: iw, hz: idp, doorX, well };
+
+	}
+
+	B.pop();
+
+	// colliders: walls with the doorway, the floor
+	const wy = ( bodyBot + roofTop ) / 2, wh = ( roofTop - bodyBot ) / 2;
+	fr.addBoxL( 0, wy, - d / 2 + t / 2, w / 2 + 0.06, wh, t / 2 + 0.04, { tag: 'house' } );
+	for ( const sx of [ - 1, 1 ] ) fr.addBoxL( sx * ( w / 2 - t / 2 ), wy, 0, t / 2 + 0.04, wh, d / 2 + 0.06, { tag: 'house' } );
+	fr.addBoxL( ( - w / 2 + xa ) / 2, wy, d / 2 - t / 2, ( xa + w / 2 ) / 2, wh, t / 2 + 0.04, { tag: 'house' } );
+	fr.addBoxL( ( xb + w / 2 ) / 2, wy, d / 2 - t / 2, ( w / 2 - xb ) / 2, wh, t / 2 + 0.04, { tag: 'house' } );
+	fr.addBoxL( doorX, ( floorY + ODH + roofTop ) / 2, d / 2 - t / 2, ODW, ( roofTop - floorY - ODH ) / 2, t / 2 + 0.04, { tag: 'house' } );
+	fr.addBoxL( 0, flY - 0.06, 0, iw, 0.06, idp, { walkable: true, solid: true, tag: 'houseFloor' } );
+	if ( up ) for ( const [ x0, x1, z0, z1 ] of slab ) fr.addBoxL( ( x0 + x1 ) / 2, upY - 0.06, ( z0 + z1 ) / 2, ( x1 - x0 ) / 2, 0.06, ( z1 - z0 ) / 2, { walkable: true, tag: 'houseFloor' } );
+
+	// the door leaf on its own hinged mesh (left jamb, swings in); open to start with
+	if ( ctx.door ) {
+
+		const dw = 0.92, dh = 2.08;
+		const hp = fr.toW( doorX - dw / 2, d / 2 - t / 2 );
+		const blocker = fr.addBoxL( doorX, floorY + 1.05, d / 2 - t / 2, ODW, 1.05, t / 2, { tag: 'door' } );
+		const D = ctx.door( { hinge: new Vector3( hp.x, floorY, hp.z ), yaw: s.yaw, openAngle: 1.65, open: true, blocker } );
+		D.B.box( 'wood', dw / 2, dh / 2, 0, dw, dh, 0.045, { grain: 1, tint: st.accent, data: [ rand.next(), st.paint, st.doorPattern ?? 3, st.weather ] } );
+		for ( const zz of [ 0.035, - 0.035 ] ) D.B.lathe( 'hard', dw - 0.1, 0.98, zz, [ [ 0, 0 ], [ 0.012, 0 ], [ 0.012, 0.03 ], [ 0.028, 0.045 ], [ 0.0, 0.065 ] ], { segs: 8, rx: zz > 0 ? Math.PI / 2 : - Math.PI / 2, tint: C.brass, data: HARD( rand.next(), 0.1, 0.9, 0.35 ) } );
+		if ( ctx.interact ) {
+
+			const c = fr.toW( doorX, d / 2 - t / 2 );
+			ctx.interact( { pos: new Vector3( c.x, floorY + 1.0, c.z ), radius: 1.8, text: () => D.target > 0.5 ? 'Close door' : 'Open door', act: () => D.toggle() } );
+
+		}
+
+	}
+
+	return { x: s.x, z: s.z, yaw: s.yaw, floorY: flY, ceilY, hx: iw, hz: idp, doorX, upstairs: upRoom, stair: up ? [ sx0, sx1, sz1, sz0 ] : null };
 
 }
 

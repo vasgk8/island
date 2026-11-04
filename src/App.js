@@ -46,7 +46,7 @@ import { LocalLights, addVillageLights, addBoatLights } from './materials/LocalL
 import { WaterQuery } from './ocean/WaterQuery.js';
 import { Breakers } from './ocean/Breakers.js';
 import { SurfFoam } from './ocean/SurfFoam.js';
-import { Spray } from './fx/Spray.js';
+import { Spray, SPRAY } from './fx/Spray.js';
 import { SeaDetail } from './ocean/SeaDetail.js';
 import { MarineSnow } from './fx/MarineSnow.js';
 import { AirMotes } from './fx/AirMotes.js';
@@ -55,10 +55,9 @@ import { Underwater, LENS_REACH } from './post/Underwater.js';
 import { PostFX } from './post/PostFX.js';
 import { AirHaze } from './post/AirHaze.js';
 import { FlyCamera } from './player/FlyCamera.js';
+import { TouchControls, touchWanted } from './ui/TouchControls.js';
+import { loadPrefs, savePrefs, prefNumber, isPhoneLike } from './core/Prefs.js';
 import { Player } from './player/Player.js';
-import { Game } from './game/Game.js';
-import { STAND } from './game/FishStand.js';
-import { CHANDLERY } from './game/Chandlery.js';
 import { BoatController } from './player/BoatController.js';
 import { BoatSpray } from './player/BoatSpray.js';
 import { WakeSim } from './ocean/WakeSim.js';
@@ -107,6 +106,7 @@ export class App {
 		this.camera = camera;
 
 		this.input = new Input( engine.domElement );
+		if ( touchWanted() ) this.touch = new TouchControls( this.input );
 		this.fly = new FlyCamera( camera, engine.domElement, this.input );
 		this.fly.setPose( new Vector3( 20, 6, - 20 ), Math.PI * 0.9, - 0.12 );
 
@@ -233,6 +233,9 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		// flashlight (L): nearest few packed into one small uniform array each frame
 		this.localLights = new LocalLights();
 		addVillageLights( this.localLights, this.village );
+		this.localLights.setRooms( this.village.interiors );
+		// door creaks and thuds
+		for ( const D of this.village.doors ) D.onToggle = ( opening ) => this.audio && this.audio.doorSound( D.hinge, opening );
 		addBoatLights( this.localLights, this.boat );
 		// rough, large or heavily overdrawn surfaces (ground, rocks, debris, foliage) take the local
 		// lights as Lambert only; the village, pier and boat get the full BRDF (glints on wet wood, metal)
@@ -332,25 +335,27 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		} );
 		this.post = new PostFX( renderer, { sceneRenderer: this.sceneRenderer, camera, underwater: this.underwater, clouds: this.clouds, sunDir: this.atmosphere.sunDir, haze: this.haze } );
 		G.exposure.value = this.settings.exposure;
+		// remembered settings (core/Prefs.js); phones start at a lower internal resolution
+		const prefs = this.prefs = loadPrefs();
+		const tod = prefNumber( prefs.timeOfDay, 0, 24 ), speed = prefNumber( prefs.timeSpeed, 0, 2 );
+		if ( tod !== undefined ) this.settings.timeOfDay = tod;
+		if ( speed !== undefined ) this.settings.timeSpeed = speed;
+		this.input.lookScale = prefNumber( prefs.lookScale, 0.3, 3 ) ?? this.input.lookScale;
+		const savedScale = prefNumber( prefs.renderScale, 0.5, 1 );
+		if ( savedScale !== undefined ) this.settings.renderScale = savedScale;
+		else if ( isPhoneLike() ) this.settings.renderScale = 0.6;
 		if ( qs.has( 'scale' ) ) this.settings.renderScale = Number( qs.get( 'scale' ) ) || 1;
 		this.setRenderScale( this.settings.renderScale );
+		const save = () => this.savePrefs();
+		window.addEventListener( 'pagehide', save );
+		document.addEventListener( 'visibilitychange', () => document.visibilityState === 'hidden' && save() );
 
 		// ---------------------------------------------------------------- audio
 		// recorded field recordings (public/audio, credits in public/audio/CREDITS.md); ?noAudio turns it off
 		this.audio = qs.has( 'noAudio' ) ? null : new SoundScape();
+		if ( this.touch && this.audio ) this.touch.root.addEventListener( 'pointerdown', () => this.audio.resume() );
 		this.player.audio = this.audio;
-		// the fishing game (rod, bites, catch, cooler, fish stand)
-		this.game = new Game( this );
-		// the lanterns at Joe's fish stand and Marta's chandlery (lit from dusk like the village lamps);
-		// positions are in each stall's frame (x right, z toward the customer), turned by its yaw
-		for ( const [ s, lx, ly, lz ] of [ [ STAND, - 0.9, 1.85, 0.1 ], [ CHANDLERY, - 0.75, 1.58, - 1.45 ] ] ) {
-
-			const c = Math.cos( s.yaw ), sn = Math.sin( s.yaw );
-			const x = s.x + lx * c + lz * sn, z = s.z - lx * sn + lz * c;
-			this.localLights.add( { position: new Vector3( x, this.terrainData.heightAt( s.x, s.z ) + ly, z ), color: new Color( 1.0, 0.72, 0.42 ), intensity: 5 * 1.5, range: 11, kind: 'lantern', flicker: 0.08 } );
-
-		}
-
+		this.player.onMoored = ( dock ) => this.ui && this.ui.ui.toast( `Moored at ${ dock.name }` );
 		this.boatCtl.onSlam = ( s ) => this.audio && this.audio.hullSlap( s );
 		engine.domElement.addEventListener( 'click', () => {
 
@@ -382,6 +387,22 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 			await GPU.queue.onSubmittedWorkDone();
 
 		}
+
+		// back in fly mode if that is how you left
+		if ( this.prefs.fly === true && ! qs.has( 'fly' ) ) this.setFreeCam( true );
+		if ( this.prefs.speedBoost === true ) {
+
+			this.speedBoost = true;
+			this.player.speedMul = this.fly.speedMul = 2;
+
+		}
+
+	}
+
+	savePrefs() {
+
+		const s = this.settings;
+		savePrefs( { v: 1, timeOfDay: s.timeOfDay, timeSpeed: s.timeSpeed, lookScale: this.input.lookScale, fly: !! this.freeCam, speedBoost: !! this.speedBoost, renderScale: s.renderScale } );
 
 	}
 
@@ -501,6 +522,153 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 	}
 
+	isNight() {
+
+		const t = this.settings.timeOfDay;
+		return t >= 19.5 || t < 5.5;
+
+	}
+
+	// the Day / Night button: the clock runs forward to midday, or to a moonlit night, over a few
+	// seconds (sunset / sunrise play on the way)
+	toggleDayNight() {
+
+		const night = this._timeTween ? this._timeTween.to === 22 : this.isNight();
+		const from = this.settings.timeOfDay, to = night ? 12 : 22;
+		const span = ( to - from + 24 ) % 24;
+		this._timeTween = { from, to, span, t: 0, dur: 1.5 + 3 * span / 12 };
+		if ( this.ui ) this.ui.ui.toast( night ? 'Day' : 'Night' );
+
+	}
+
+	// Things to use with E (Village.interactables: doors, beds, seats): the nearest one in reach that
+	// you are roughly facing shows its prompt; E (or the touch E button) uses it.
+	updateInteractions() {
+
+		const p = this.player, list = this.village ? this.village.interactables : null;
+		this.interactTarget = null;
+		if ( ! list || ! list.length || p.mode !== 'walk' || p.seat || p._standCooldown > 0 || this._sleeping || p.prompt ) return;
+		const e = this.camera.matrixWorld.elements;
+		let fx = - e[ 8 ], fz = - e[ 10 ];
+		const fl = Math.hypot( fx, fz ) || 1;
+		fx /= fl; fz /= fl;
+		let best = null, bestScore = Infinity;
+		for ( const it of list ) {
+
+			const dx = it.pos.x - p.position.x, dz = it.pos.z - p.position.z, dy = it.pos.y - ( p.position.y + 1 );
+			const d = Math.hypot( dx, dz );
+			if ( d > it.radius || Math.abs( dy ) > 1.6 ) continue;
+			const facing = d > 0.3 ? ( dx * fx + dz * fz ) / d : 1;
+			if ( facing < - 0.2 ) continue;
+			const score = d - facing * 0.8;
+			if ( score < bestScore ) {
+
+				bestScore = score;
+				best = it;
+
+			}
+
+		}
+
+		if ( ! best ) return;
+		this.interactTarget = best; // (the HUD marks it)
+		p.prompt = { key: 'E', text: typeof best.text === 'function' ? best.text() : best.text };
+		if ( this.input.hit( 'KeyE' ) ) {
+
+			best.act( this );
+			if ( best.sound === 'sit' && this.audio ) this.audio.seatSound( best.pos );
+
+		}
+
+	}
+
+	// a thin trail of smoke from the chimneys (spray mist: drifts with the wind), within view range
+	emitChimneySmoke( dt ) {
+
+		if ( ! this.village || ! this.village.chimneys.length || ! this.spray ) return;
+		this._smokeT = ( this._smokeT ?? 0 ) - dt;
+		if ( this._smokeT > 0 ) return;
+		this._smokeT = 0.12;
+		const cam = this.camera.position;
+		const v = this._smokeV || ( this._smokeV = new Vector3( 0, 0.9, 0 ) );
+		for ( const c of this.village.chimneys ) {
+
+			if ( c.distanceToSquared( cam ) > 260 * 260 ) continue;
+			this.spray.emit( c, v, 2, 0.22, SPRAY.MIST, { spread: 0.25, jitter: 0.12, life: 6, sizeJitter: 0.6 } );
+
+		}
+
+	}
+
+	// sleep until morning: fade to black, set the clock to 7:15, fade back in
+	sleep() {
+
+		if ( this._sleeping || typeof document === 'undefined' ) return;
+		this._sleeping = true;
+		let el = this._fadeEl;
+		if ( ! el ) {
+
+			el = this._fadeEl = document.createElement( 'div' );
+			el.className = 'vi-fade';
+			document.body.append( el );
+
+		}
+
+		requestAnimationFrame( () => el.classList.add( 'is-on' ) );
+		setTimeout( () => {
+
+			this.setTimeOfDay( 7.25 );
+			if ( this.ui ) this.ui.ui.toast( 'Good morning' );
+			el.classList.remove( 'is-on' );
+			setTimeout( () => {
+
+				this._sleeping = false;
+
+			}, 900 );
+
+		}, 1600 );
+
+	}
+
+	// the time slider: set the hour directly (stops a running Day / Night change)
+	setTimeOfDay( hours ) {
+
+		this._timeTween = null;
+		this.settings.timeOfDay = ( ( hours % 24 ) + 24 ) % 24;
+		if ( this.ui ) this.ui.ui.refresh();
+
+	}
+
+	_stepTimeTween( dt ) {
+
+		const w = this._timeTween;
+		if ( ! w ) return;
+		w.t = Math.min( w.dur, w.t + dt );
+		const u = w.t / w.dur, e = u * u * ( 3 - 2 * u );
+		this.settings.timeOfDay = ( w.from + w.span * e ) % 24;
+		const done = w.t >= w.dur;
+		if ( done ) this._timeTween = null;
+		// keep the settings panel's time control in step (a few times a second is enough)
+		w.r = ( w.r || 0 ) + dt;
+		if ( this.ui && ( done || w.r > 0.25 ) ) {
+
+			w.r = 0;
+			this.ui.ui.refresh();
+
+		}
+
+	}
+
+	// X (or the 2x button): walk and fly twice as fast, on top of Shift
+	toggleSpeedBoost( on = ! this.speedBoost ) {
+
+		this.speedBoost = on;
+		this.player.speedMul = on ? 2 : 1;
+		this.fly.speedMul = on ? 2 : 1;
+		if ( this.ui ) this.ui.ui.toast( on ? 'Speed ×2' : 'Normal speed' );
+
+	}
+
 	// Free (debug) camera on F; the walker / boat resumes where it was left.
 	setFreeCam( on ) {
 
@@ -603,10 +771,12 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.updateFPS( dt );
 		G.dt.value = dt;
 		G.time.value += dt;
-		if ( s.timeSpeed !== 0 ) s.timeOfDay = ( s.timeOfDay + dt * s.timeSpeed + 24 ) % 24;
+		if ( this._timeTween ) this._stepTimeTween( dt );
+		else if ( s.timeSpeed !== 0 ) s.timeOfDay = ( s.timeOfDay + dt * s.timeSpeed + 24 ) % 24;
 
 		// ---- player / boat (boat physics first so the cameras follow this frame's pose)
 		if ( this.input.hit( 'KeyF' ) ) this.setFreeCam( ! this.freeCam );
+		if ( this.input.hit( 'KeyX' ) ) this.toggleSpeedBoost();
 		if ( this.input.hit( 'KeyT' ) ) this.toggleTime();
 		if ( this.input.hit( 'KeyL' ) ) {
 
@@ -625,8 +795,12 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		this.boatSpray.update( dt );
 		this.wake.update( dt );
 		if ( this.freeCam ) this.fly.update( dt );
-		else this.player.update( dt );
-		this.game.update( dt );
+		else {
+
+			this.player.update( dt );
+			this.updateInteractions();
+
+		}
 		this.updateSun();
 
 		this.atmosphere.update( dt, this.camera.position.y );
@@ -655,6 +829,7 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		if ( this.shoreSim ) this.shoreSim.update();
 		this.underwaterLighting.update( this.camera );
 		this.breakers.update( this.camera );
+		this.emitChimneySmoke( dt );
 		this.spray.update();
 		if ( this.clouds ) this.clouds.update( dt, this.camera );
 		this.environment.update( dt );
@@ -697,6 +872,13 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 
 		this.updateAudio( dt );
 		if ( this.ui ) this.ui.update( dt );
+		this._prefsT = ( this._prefsT ?? 0 ) + dt;
+		if ( this._prefsT > 5 ) {
+
+			this._prefsT = 0;
+			this.savePrefs();
+
+		}
 		this.input.endFrame();
 
 	}
@@ -722,8 +904,27 @@ fn terrainWetness( xz: vec2f, h: f32 ) -> vec2f {
 		f.up.set( 0, 1, 0 ).applyQuaternion( cam.quaternion );
 		const h = this.cameraWaterHeight ?? 0;
 		const coast = this.terrainData.coastDistance( p.x, p.z ).d;
+		// inside a room (eased), and the nearest fireplace
+		const V = this.village;
+		const ind = V ? V.indoorAt( p.x, p.y, p.z ) : 0;
+		this._indoor = ( this._indoor ?? 0 ) + ( ind - ( this._indoor ?? 0 ) ) * ( 1 - Math.exp( - dt / 0.3 ) );
+		let fire = null, fd = Infinity;
+		if ( V ) for ( const q of V.fires ) {
+
+			const dd = q.distanceToSquared( p );
+			if ( dd < fd ) {
+
+				fd = dd;
+				fire = q;
+
+			}
+
+		}
+
 		this.audio.update( dt, {
 			listener: { position: p, forward: f.fwd, up: f.up },
+			indoor: this._indoor,
+			fire,
 			underwater: p.y < h ? 1 : 0,
 			depthBelowSurface: Math.max( 0, h - p.y ),
 			surfIntensity: Math.min( 1, this.shore.amplitude.value / 0.6 ),

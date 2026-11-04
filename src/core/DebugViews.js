@@ -35,6 +35,11 @@ export const VIEWS = {
 	tStacks: { p: [ - 240, 8, 300 ], yaw: 0.15, pitch: - 0.05, time: 16.5 },
 	tCove: { p: [ - 160, 2.2, - 30 ], yaw: 1.35, pitch: - 0.08, time: 10.5 },
 	tMorning: { p: [ 18, 3.0, - 60 ], yaw: 0.2, pitch: 0.05, time: 7.2 },
+	// the places to visit (key art, review)
+	hiddenHome: { p: [ - 78.8, 36.6, - 377.0 ], yaw: - 1.48, pitch: - 0.06, time: 18.1 },
+	cabin: { p: [ - 3.5, 185.0, - 471.5 ], yaw: 0.18, pitch: - 0.12, time: 17.4 },
+	houseFront: { p: [ 31.0, 9.4, - 134.5 ], yaw: 0.0, pitch: - 0.06, time: 16.4 },
+	bayEvening: { p: [ 70, 22, 70 ], yaw: Math.PI * 0.07, pitch: - 0.16, time: 17.9 },
 };
 
 export function installDebugViews( app ) {
