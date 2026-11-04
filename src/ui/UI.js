@@ -3350,7 +3350,8 @@ export class UI {
 			t0: performance.now(), stopped: false,
 			fill: q( '.loader-fill' ), pct: q( '.loader-pct' ), time: q( '.loader-time' ), statusEl: q( '.loader-status' ),
 		};
-		// eased bar + elapsed clock while scripts run (the CSS glint and tips keep moving when they don't)
+		// eased progress while scripts run (the loader itself shows only the name; the bar, the percentage
+		// and the clock are painted when a page has them, e.g. a custom loader)
 		const tick = () => {
 
 			if ( ld.stopped ) return;
